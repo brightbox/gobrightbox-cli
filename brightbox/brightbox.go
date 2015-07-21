@@ -2,17 +2,22 @@ package brightbox
 
 import (
 	"encoding/json"
+	"errors"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strings"
 	"time"
 )
+
+type ApiError struct {
+	Error string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
 
 type Resource struct {
 	Id string
@@ -27,8 +32,10 @@ type Connection struct {
 	ClientID     string
 	ClientSecret string
 	ClientConfig *clientcredentials.Config
+	TokenUrl     string
 	TokenConfig  *oauth2.Config
 	Token        string
+	Scopes       []string
 	Client       *http.Client
 	ctx          context.Context
 }
@@ -86,12 +93,18 @@ type CloudIP struct {
 }
 
 func (c *Connection) setDefaults() {
+	if c.ApiUrl == "" {
+		c.ApiUrl = "https://api.gb1.brightbox.com"
+	}
+	if c.TokenUrl == "" {
+		c.TokenUrl = c.ApiUrl + "/token"
+	}
 	if c.ClientConfig == nil {
 		c.ClientConfig = &clientcredentials.Config{
 			ClientID:     c.ClientID,
 			ClientSecret: c.ClientSecret,
-			TokenURL:     "https://api.gb1s.brightbox.com/token",
-			Scopes:       []string{""},
+			TokenURL:     c.TokenUrl,
+			Scopes:       c.Scopes,
 		}
 	}
 	if c.TokenConfig == nil {
@@ -100,13 +113,19 @@ func (c *Connection) setDefaults() {
 	c.ctx = oauth2.NoContext
 }
 
-func (c *Connection) Connect() {
+func (c *Connection) Connect() error {
+	var client *http.Client
 	c.setDefaults()
-	//client := c.ClientConfig.Client(c.ctx)
-	client := oauth2.NewClient(c.ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.Token, TokenType: "OAuth"}))
-	if client != nil {
-		c.Client = client
+	if c.Token != "" {
+		client = oauth2.NewClient(c.ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.Token}))
+	} else if c.ClientConfig != nil {
+		client = c.ClientConfig.Client(c.ctx)
 	}
+	if client == nil {
+		return errors.New("Failed to create oauth2 client")
+	}
+	c.Client = client
+	return nil
 }
 
 func DisplayIds(resources interface{}) string {
@@ -130,20 +149,55 @@ func (c *Connection) api_url(path string) string {
 	if c.AccountId != "" {
 		v.Set("account_id", c.AccountId)
 	}
-	u, _ = u.Parse("/1.0/" + path)
+	u, _ = u.Parse("/1.0" + path)
 	u.RawQuery = v.Encode()
 	return u.String()
 }
 
-func (c *Connection) Servers() []Server {
-	res, err := c.Client.Get(c.api_url("/servers"))
+func (c *Connection) MakeApiRequest(method string, path string) (*[]byte, error) {
+	var body []byte
+	var apierror ApiError
+	res, err := c.Client.Get(c.api_url(path))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	var servers []Server
+	body, err = ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	err = json.Unmarshal(body, &servers)
-	return servers
-	//log.Print(servers)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode == 200 {
+		return &body, err
+	} else {
+		json.Unmarshal(body, &apierror)
+		return nil, errors.New(apierror.ErrorDescription)
+	}
+}
+
+func (c *Connection) Servers() (*[]Server, *[]byte, error) {
+	var servers []Server
+	var body *[]byte
+	body, err := c.MakeApiRequest("get", "/servers")
+	if err != nil {
+		return nil, body, err
+	}
+	err = json.Unmarshal(*body, &servers)
+	if err != nil {
+		return &servers, body, err
+	}
+	return &servers, body, err
+}
+
+func (c *Connection) Server(identifier string) (*Server, *[]byte, error) {
+	var server Server
+	var body *[]byte
+	body, err := c.MakeApiRequest("get", "/servers/" + identifier)
+	if err != nil {
+		return nil, body, err
+	}
+	err = json.Unmarshal(*body, &server)
+	if err != nil {
+		return &server, body, err
+	}
+	return &server, body, err
 }

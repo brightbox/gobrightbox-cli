@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 	"io"
 	"fmt"
 	"text/tabwriter"
+	"encoding/json"
 )
 
 
@@ -23,3 +25,8 @@ func listRec(w io.Writer, a ...interface{}) {
 	}
 }
 
+func PrettyPrintJson(body []byte) *bytes.Buffer {
+	var out bytes.Buffer
+	json.Indent(&out, body, "", "\t")
+	return &out
+}

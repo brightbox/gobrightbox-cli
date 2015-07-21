@@ -6,7 +6,6 @@ import (
 	"./cli"
 )
 
-
 func main() {
 	app := kingpin.New("brightbox", "Bleh")
 	cli.ConfigureServersCommand(app)
