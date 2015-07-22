@@ -28,9 +28,9 @@ func listRec(w io.Writer, a ...interface{}) {
 	}
 }
 
-func drawShow(w io.Writer, d map[string]interface{}, order []string) {
-	for _, key := range order {
-		fmt.Fprint(w, key, ": \t", d[key])
+func drawShow(w io.Writer, d []interface{}) {
+	for i:=0;i+1<len(d);i+=2 {
+		fmt.Fprint(w, d[i], ": \t", d[i+1])
 		w.Write([]byte{'\n'})
 	}
 }

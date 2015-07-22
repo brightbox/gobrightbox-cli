@@ -54,26 +54,26 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 	if l.Json {
 		fmt.Fprint(w, PrettyPrintJson(*body))
 	} else {
-		drawShow(w, map[string]interface{}{
-			"id":                 s.Id,
-			"status":             s.Status,
-			"locked":             s.Locked,
-			"name":               s.Name,
-			"created_at":         s.CreatedAt,
-			"deleted_at":         s.DeletedAt,
-			"zone":               s.Zone.Handle,
-			"type":               s.ServerType.Id,
-			"type_name":          s.ServerType.Name,
-			"type_handle":        s.ServerType.Handle,
-			"ram":                s.ServerType.Ram,
-			"cores":              s.ServerType.Cores,
-			"disk":               s.ServerType.DiskSize,
-			"compatability_mode": s.CompatabilityMode,
-			"image":              s.Image.Id,
-			"image_name":         s.Image.Name,
-			"arch":               s.Image.Arch,
-			"private_ips":        s.Interfaces[0].IPv4Address,
-		}, []string{"id", "status", "locked", "name", "created_at", "deleted_at", "zone", "type", "type_name", "type_handle", "ram", "cores", "disk", "compatability_mode", "image", "image_name", "arch", "private_ips"})
+		drawShow(w, []interface{}{
+			"id", s.Id,
+			"status", s.Status,
+			"locked", s.Locked,
+			"name", s.Name,
+			"created_at", s.CreatedAt,
+			"deleted_at", s.DeletedAt,
+			"zone", s.Zone.Handle,
+			"type", s.ServerType.Id,
+			"type_name", s.ServerType.Name,
+			"type_handle", s.ServerType.Handle,
+			"ram", s.ServerType.Ram,
+			"cores", s.ServerType.Cores,
+			"disk", s.ServerType.DiskSize,
+			"compatability_mode", s.CompatabilityMode,
+			"image", s.Image.Id,
+			"image_name", s.Image.Name,
+			"arch", s.Image.Arch,
+			"private_ips", s.Interfaces[0].IPv4Address,
+		})
 	}
 	return nil
 
