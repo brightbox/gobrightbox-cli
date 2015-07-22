@@ -42,24 +42,24 @@ type Connection struct {
 
 type Server struct {
 	Resource
-	Name       string
-	Status     string
-	Locked     bool
-	Hostname   string
-	Fqdn       string
-	CreatedAt  time.Time  `json:"created_at"`
-	DeletedAt  string     `json:"deleted_at,omitempty"`
-	ServerType ServerType `json:"server_type"`
-	CompatabilityMode bool `json:"compatability_mode"`
-	Zone       Zone
-	Image      Image
-	CloudIPs   []CloudIP `json:"cloud_ips"`
-	Interfaces []ServerInterface
+	Name              string
+	Status            string
+	Locked            bool
+	Hostname          string
+	Fqdn              string
+	CreatedAt         *time.Time `json:"created_at"`
+	DeletedAt         *time.Time `json:"deleted_at"`
+	ServerType        ServerType `json:"server_type"`
+	CompatabilityMode bool       `json:"compatability_mode"`
+	Zone              Zone
+	Image             Image
+	CloudIPs          []CloudIP `json:"cloud_ips"`
+	Interfaces        []ServerInterface
 }
 
 type ServerInterface struct {
 	Resource
-	MacAddress string `json:"mac_address"`
+	MacAddress  string `json:"mac_address"`
 	IPv4Address string `json:"ipv4_address"`
 	IPv6Address string `json:"ipv6_address"`
 }
