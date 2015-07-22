@@ -15,7 +15,7 @@ import (
 )
 
 type ApiError struct {
-	Error string `json:"error"`
+	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
 }
 
@@ -48,10 +48,20 @@ type Server struct {
 	Hostname   string
 	Fqdn       string
 	CreatedAt  time.Time  `json:"created_at"`
+	DeletedAt  string     `json:"deleted_at,omitempty"`
 	ServerType ServerType `json:"server_type"`
+	CompatabilityMode bool `json:"compatability_mode"`
 	Zone       Zone
 	Image      Image
 	CloudIPs   []CloudIP `json:"cloud_ips"`
+	Interfaces []ServerInterface
+}
+
+type ServerInterface struct {
+	Resource
+	MacAddress string `json:"mac_address"`
+	IPv4Address string `json:"ipv4_address"`
+	IPv6Address string `json:"ipv6_address"`
 }
 
 type ServerType struct {
@@ -131,8 +141,8 @@ func (c *Connection) Connect() error {
 func DisplayIds(resources interface{}) string {
 	val := reflect.ValueOf(resources)
 	if val.Kind() == reflect.Slice {
-		var ids = make([]string,val.Len())
-		for i:=0;i<val.Len(); i++ {
+		var ids = make([]string, val.Len())
+		for i := 0; i < val.Len(); i++ {
 			rval := val.Index(i)
 			if rval.Kind() == reflect.Struct && rval.FieldByName("Id").IsValid() {
 				ids[i] = rval.FieldByName("Id").String()
@@ -191,7 +201,7 @@ func (c *Connection) Servers() (*[]Server, *[]byte, error) {
 func (c *Connection) Server(identifier string) (*Server, *[]byte, error) {
 	var server Server
 	var body *[]byte
-	body, err := c.MakeApiRequest("get", "/servers/" + identifier)
+	body, err := c.MakeApiRequest("get", "/servers/"+identifier)
 	if err != nil {
 		return nil, body, err
 	}

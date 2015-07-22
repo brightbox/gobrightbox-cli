@@ -1,15 +1,14 @@
 package cli
 
 import (
-	"os"
 	"../brightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
-
+	"os"
 )
 
 type Config struct {
 	Conn *brightbox.Connection
-	App *kingpin.Application
+	App  *kingpin.Application
 }
 
 func (c *Config) Configure() error {
