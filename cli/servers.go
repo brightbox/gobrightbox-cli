@@ -10,10 +10,11 @@ type ServersCommand struct {
 	All  bool
 	Json bool
 	Id   string
+	ClientName string
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
-	c, err := NewConfigAndConnect()
+	c, err := NewConfigAndConnect(l.ClientName)
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
-	c, err := NewConfigAndConnect()
+	c, err := NewConfigAndConnect(l.ClientName)
 	if err != nil {
 		return err
 	}
@@ -79,11 +80,12 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func ConfigureServersCommand(app *kingpin.Application) {
+func ConfigureConfigCommand(app *kingpin.Application) {
 	c := &ServersCommand{}
 	servers := app.Command("servers", "manage cloud servers")
 	servers.Command("list", "list cloud servers").Action(c.list)
 	show := servers.Command("show", "view details on cloud servers").Action(c.show)
 	show.Arg("identifier", "identifier of server to show").Required().StringVar(&c.Id)
 	app.Flag("json", "Output raw json from server.").BoolVar(&c.Json)
+	app.Flag("client", "client to authenticate with.").StringVar(&c.ClientName)
 }

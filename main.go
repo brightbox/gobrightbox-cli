@@ -9,6 +9,7 @@ import (
 func main() {
 	app := kingpin.New("brightbox", "Bleh")
 	cli.ConfigureServersCommand(app)
+	cli.ConfigureConfigCommand(app)
 	//kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version("0.1").Author("John Leach")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	//kingpin.Parse()
