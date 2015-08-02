@@ -2,7 +2,8 @@ package cli
 
 import (
 	"../brightbox"
-	"errors"
+	"fmt"
+	"golang.org/x/oauth2"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/ini.v1"
 	"os/user"
@@ -10,61 +11,51 @@ import (
 	"sort"
 )
 
-type ConfigFileSection struct {
-	SectionName    string
+type ConfigClient struct {
+	ClientName     string
 	ClientID       string `ini:"client_id"`
 	Secret         string `ini:"secret"`
 	ApiUrl         string `ini:"api_url"`
 	DefaultAccount string `ini:"default_account"`
 	AuthUrl        string `ini:"auth_url"`
 	Username       string `ini:"username"`
-	DefaultClient  string `ini:"default_client"`
 }
 
 type Config struct {
-	Conn          *brightbox.Connection
+	Conn          brightbox.Connection
 	App           *kingpin.Application
-	Clients       map[string]ConfigFileSection
+	Clients       map[string]ConfigClient
 	DefaultClient string
-	Client        *ConfigFileSection
+	Client        *ConfigClient
+}
+
+type TokenCacheSource struct {
+	ts oauth2.TokenSource
+}
+
+func (s TokenCacheSource) Token() (*oauth2.Token, error) {
+	t, e := s.ts.Token()
+	return t, e
 }
 
 func (c *Config) Configure() error {
-	/*c.Conn = &brightbox.Connection{
-			Token:        os.Getenv("BRIGHTBOX_TOKEN"),
-			AccountId:    os.Getenv("BRIGHTBOX_ACCOUNT"),
-			ClientID:     os.Getenv("BRIGHTBOX_CLIENT_ID"),
-			ClientSecret: os.Getenv("BRIGHTBOX_CLIENT_SECRET"),
-			ApiUrl:       os.Getenv("BRIGHTBOX_API_URL"),
-		}*/
-	conn := brightbox.Connection{}
-	conn.ClientID = c.Client.ClientID
-	conn.ApiUrl = c.Client.ApiUrl
-	conn.ClientSecret = c.Client.Secret
-	c.Conn = &conn
+	c.Conn.ClientID = c.Client.ClientID
+	c.Conn.ApiUrl = c.Client.ApiUrl
+	c.Conn.ClientSecret = c.Client.Secret
 	return nil
 }
 
-func NewConfig(clientName string) (*Config, error) {
-	var config Config
-	err := config.readConfig()
+func NewConfig() (*Config, error) {
+	cfg := new(Config)
+	cfg.Clients = make(map[string]ConfigClient)
+	err := cfg.readConfig()
 	if err != nil {
-		return &config, err
+		return cfg, err
 	}
-	err = config.setClient(clientName)
-	if err != nil {
-		return &config, err
-	}
-
-	err = config.Configure()
-
-	return &config, err
+	return cfg, err
 }
 
 func (c *Config) readConfig() error {
-	if c.Clients == nil {
-		c.Clients = make(map[string]ConfigFileSection)
-	}
 	u, err := user.Current()
 	if err != nil {
 		return err
@@ -73,28 +64,27 @@ func (c *Config) readConfig() error {
 	if err != nil {
 		return err
 	}
-	cfg.BlockMode = false
+	//cfg.BlockMode = false
+	core := cfg.Section("core")
+	c.DefaultClient = core.Key("default_client").String()
 	for _, sec := range cfg.Sections() {
-		cs := new(ConfigFileSection)
-		cs.SectionName = sec.Name()
-		if cs.SectionName == "" {
-			continue
-		}
-		err = sec.MapTo(cs)
-		if err != nil {
-			continue
-		}
-		if cs.SectionName == "DEFAULT" || cs.SectionName == "core" {
-			c.DefaultClient = cs.DefaultClient
-		} else {
-			c.Clients[cs.SectionName] = *cs
+		if sec.Name() != "DEFAULT" && sec.Name() != "core" {
+			cs := new(ConfigClient)
+			cs.ClientName = sec.Name()
+			if cs.ClientName == "" {
+				continue
+			}
+			err = sec.MapTo(cs)
+			if err != nil {
+				continue
+			}
+			c.Clients[cs.ClientName] = *cs
 		}
 	}
 	err = c.setClient(c.DefaultClient)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -105,19 +95,28 @@ func (c *Config) setClient(clientName string) error {
 	client, e := c.Clients[clientName]
 	if e {
 		c.Client = &client
+		//c.Conn.CachedToken = &oauth2.Token{AccessToken: "1540e27f393a77b704c789eb40e7940f76bda1c9"}
 		return nil
 	} else {
-		return errors.New("client name not found in config.")
+		return fmt.Errorf("client '%s' not found in config.", clientName)
 	}
 }
 
-func NewConfigAndConnect(clientName string) (*Config, error) {
-	config, err := NewConfig(clientName)
+func NewConfigAndConfigure(clientName string) (*Config, error) {
+	cfg, err := NewConfig()
 	if err != nil {
-		return config, err
+		return cfg, err
 	}
-	err = config.Conn.Connect()
-	return config, err
+	err = cfg.setClient(clientName)
+	if err != nil {
+		return cfg, err
+	}
+	err = cfg.Configure()
+	if err != nil {
+		return cfg, err
+	}
+	err = cfg.Conn.Connect()
+	return cfg, err
 }
 
 type ConfigCommand struct {
@@ -127,7 +126,7 @@ type ConfigCommand struct {
 }
 
 func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfig("")
+	cfg, err := NewConfig()
 	if err != nil {
 		return err
 	}
@@ -151,7 +150,7 @@ func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfig("")
+	cfg, err := NewConfig()
 	if err != nil {
 		return err
 	}
@@ -162,8 +161,8 @@ func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
 		return err
 	}
 	drawShow(w, []interface{}{
-		"name", c.SectionName,
-		"default", c.DefaultClient == c.SectionName,
+		"name", c.ClientName,
+		"default", cfg.DefaultClient == c.ClientName,
 		"client_id", c.ClientID,
 		"api_url", c.ApiUrl,
 		"auth_url", c.AuthUrl,

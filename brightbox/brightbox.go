@@ -34,7 +34,8 @@ type Connection struct {
 	ClientConfig *clientcredentials.Config
 	TokenUrl     string
 	TokenConfig  *oauth2.Config
-	Token        string
+	Token        *oauth2.Token
+	CachedToken  *oauth2.Token
 	Scopes       []string
 	Client       *http.Client
 	ctx          context.Context
@@ -120,16 +121,22 @@ func (c *Connection) setDefaults() {
 	if c.TokenConfig == nil {
 		c.TokenConfig = &oauth2.Config{}
 	}
-	c.ctx = oauth2.NoContext
+	c.ctx = context.TODO()
 }
 
 func (c *Connection) Connect() error {
 	var client *http.Client
 	c.setDefaults()
-	if c.Token != "" {
-		client = oauth2.NewClient(c.ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.Token}))
+
+	if c.Token != nil {
+		client = oauth2.NewClient(c.ctx, oauth2.StaticTokenSource(c.Token))
 	} else if c.ClientConfig != nil {
-		client = c.ClientConfig.Client(c.ctx)
+		token_source := c.ClientConfig.TokenSource(c.ctx)
+		if c.CachedToken != nil {
+			//cached_token := oauth2.Token{AccessToken: "sometoken", Expiry: time.Now().Add(2 * time.Hour)}
+			token_source = oauth2.ReuseTokenSource(c.CachedToken, token_source)
+		}
+		client = oauth2.NewClient(c.ctx, token_source)
 	}
 	if client == nil {
 		return errors.New("Failed to create oauth2 client")

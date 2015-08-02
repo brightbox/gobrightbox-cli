@@ -4,6 +4,8 @@ import (
 	"../brightbox"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"golang.org/x/oauth2"
+	"reflect"
 )
 
 type ServersCommand struct {
@@ -13,18 +15,25 @@ type ServersCommand struct {
 	ClientName string
 }
 
+type TokenSourcer interface {
+	TokenSource() *oauth2.TokenSource
+}
+
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
-	c, err := NewConfigAndConnect(l.ClientName)
+	cfg, err := NewConfigAndConfigure(l.ClientName)
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 	defer w.Flush()
-	servers, body, err := c.Conn.Servers()
+	servers, body, err := cfg.Conn.Servers()
 	if err != nil {
 		return err
 	}
+	fmt.Print(reflect.TypeOf(cfg.Conn.Client.Transport),"\n")
+	//tval := reflect.ValueOf(cfg.Conn.Client.Transport)
+	//fmt.Print(cfg.Conn.Client.Transport.Source)
 	if l.Json {
 		if len(*servers) > 0 {
 			fmt.Fprint(w, PrettyPrintJson(*body))
@@ -42,13 +51,13 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
-	c, err := NewConfigAndConnect(l.ClientName)
+	cfg, err := NewConfigAndConfigure(l.ClientName)
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, body, err := c.Conn.Server(l.Id)
+	s, body, err := cfg.Conn.Server(l.Id)
 	if err != nil {
 		return err
 	}
@@ -81,11 +90,11 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureConfigCommand(app *kingpin.Application) {
-	c := &ServersCommand{}
+	cmd := new(ServersCommand)
 	servers := app.Command("servers", "manage cloud servers")
-	servers.Command("list", "list cloud servers").Action(c.list)
-	show := servers.Command("show", "view details on cloud servers").Action(c.show)
-	show.Arg("identifier", "identifier of server to show").Required().StringVar(&c.Id)
-	app.Flag("json", "Output raw json from server.").BoolVar(&c.Json)
-	app.Flag("client", "client to authenticate with.").StringVar(&c.ClientName)
+	servers.Command("list", "list cloud servers").Action(cmd.list)
+	show := servers.Command("show", "view details on cloud servers").Action(cmd.show)
+	show.Arg("identifier", "identifier of server to show").Required().StringVar(&cmd.Id)
+	app.Flag("json", "Output raw json from server.").BoolVar(&cmd.Json)
+	app.Flag("client", "client to authenticate with.").StringVar(&cmd.ClientName)
 }
