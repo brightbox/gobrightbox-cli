@@ -3,12 +3,15 @@ package cli
 import (
 	"../brightbox"
 	"fmt"
-	"golang.org/x/oauth2"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/ini.v1"
 	"os/user"
+	"os"
 	"path"
 	"sort"
+	"golang.org/x/oauth2"
+	"encoding/json"
+	"io/ioutil"
 )
 
 type ConfigClient struct {
@@ -22,26 +25,81 @@ type ConfigClient struct {
 }
 
 type Config struct {
-	Conn          brightbox.Connection
+	Conn          brightbox.Client
 	App           *kingpin.Application
 	Clients       map[string]ConfigClient
 	DefaultClient string
 	Client        *ConfigClient
 }
 
-type TokenCacheSource struct {
-	ts oauth2.TokenSource
+type TokenCacher struct {
+	Key string
+	token *oauth2.Token
 }
 
-func (s TokenCacheSource) Token() (*oauth2.Token, error) {
-	t, e := s.ts.Token()
-	return t, e
+func (tc *TokenCacher) Read() *oauth2.Token {
+	if tc.token != nil && tc.token.Valid() == true {
+		return tc.token
+	}
+	filename := tc.jsonFilename()
+	if filename == nil {
+		return nil
+	}
+	token_json, err := ioutil.ReadFile(*filename)
+	if err != nil {
+		return nil
+	}
+	var token oauth2.Token
+	err = json.Unmarshal(token_json, &token)
+	if err != nil {
+		return nil
+	}
+	tc.token = &token
+	return tc.token
+}
+
+func (tc *TokenCacher) jsonFilename() *string {
+	dir := configDirectory()
+	if dir == nil {
+		return nil
+	}
+	filename := path.Join(*dir, tc.Key + ".oauth_token.json")
+	return &filename
+}
+
+func (tc *TokenCacher) Write(token *oauth2.Token) {
+	if token == nil {
+		return
+	}
+	// FIXME: make sure token differs from one we already have
+	tc.token = token
+	filename := tc.jsonFilename()
+	if filename == nil {
+		return
+	}
+	j, err := json.Marshal(token)
+	if err != nil {
+		return
+	}
+	err = ioutil.WriteFile(*filename, j, 600)
+}
+
+func (tc *TokenCacher) Clear() {
+	tc.token = nil
+	filename := tc.jsonFilename()
+	if filename == nil {
+		return
+	}
+	os.Remove(*filename)
 }
 
 func (c *Config) Configure() error {
-	c.Conn.ClientID = c.Client.ClientID
-	c.Conn.ApiUrl = c.Client.ApiUrl
-	c.Conn.ClientSecret = c.Client.Secret
+	c.Conn.New(&brightbox.AuthOptions{
+		ClientID: c.Client.ClientID,
+		ClientSecret: c.Client.Secret,
+		ApiUrl: c.Client.ApiUrl,
+		TokenCache: &TokenCacher{Key: c.Client.ClientName},
+	})
 	return nil
 }
 
@@ -55,12 +113,25 @@ func NewConfig() (*Config, error) {
 	return cfg, err
 }
 
-func (c *Config) readConfig() error {
+func configDirectory() *string {
 	u, err := user.Current()
 	if err != nil {
-		return err
+		return nil
 	}
-	cfg, err := ini.Load(path.Join(u.HomeDir, ".brightbox/config"))
+	dir := path.Join(u.HomeDir, ".brightbox")
+	return &dir
+}
+
+func (c *Config) readConfig() error {
+	config_dir := configDirectory()
+	if config_dir == nil {
+		return nil
+	}
+	config_filename := path.Join(*config_dir, "config")
+	cfg, err := ini.Load(config_filename)
+	if os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -115,7 +186,7 @@ func NewConfigAndConfigure(clientName string) (*Config, error) {
 	if err != nil {
 		return cfg, err
 	}
-	err = cfg.Conn.Connect()
+	//err = cfg.Conn.Connect()
 	return cfg, err
 }
 

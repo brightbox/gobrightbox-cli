@@ -3,9 +3,6 @@ package brightbox
 import (
 	"encoding/json"
 	"errors"
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,6 +11,21 @@ import (
 	"time"
 )
 
+type Client struct {
+	Auth       *AuthOptions
+	HttpClient *http.Client
+}
+
+func (c *Client) New(a *AuthOptions) error {
+	c.Auth = a
+	hc, err := a.NewClient()
+	if err != nil {
+		return err
+	}
+	c.HttpClient = hc
+	return nil
+}
+
 type ApiError struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
@@ -21,24 +33,6 @@ type ApiError struct {
 
 type Resource struct {
 	Id string
-}
-
-type Connection struct {
-	ApiUrl       string
-	UserName     string
-	UserSecret   string
-	AccountId    string
-	UserAgent    string
-	ClientID     string
-	ClientSecret string
-	ClientConfig *clientcredentials.Config
-	TokenUrl     string
-	TokenConfig  *oauth2.Config
-	Token        *oauth2.Token
-	CachedToken  *oauth2.Token
-	Scopes       []string
-	Client       *http.Client
-	ctx          context.Context
 }
 
 type Server struct {
@@ -103,48 +97,6 @@ type CloudIP struct {
 	Name       string
 }
 
-func (c *Connection) setDefaults() {
-	if c.ApiUrl == "" {
-		c.ApiUrl = "https://api.gb1.brightbox.com"
-	}
-	if c.TokenUrl == "" {
-		c.TokenUrl = c.ApiUrl + "/token"
-	}
-	if c.ClientConfig == nil {
-		c.ClientConfig = &clientcredentials.Config{
-			ClientID:     c.ClientID,
-			ClientSecret: c.ClientSecret,
-			TokenURL:     c.TokenUrl,
-			Scopes:       c.Scopes,
-		}
-	}
-	if c.TokenConfig == nil {
-		c.TokenConfig = &oauth2.Config{}
-	}
-	c.ctx = context.TODO()
-}
-
-func (c *Connection) Connect() error {
-	var client *http.Client
-	c.setDefaults()
-
-	if c.Token != nil {
-		client = oauth2.NewClient(c.ctx, oauth2.StaticTokenSource(c.Token))
-	} else if c.ClientConfig != nil {
-		token_source := c.ClientConfig.TokenSource(c.ctx)
-		if c.CachedToken != nil {
-			//cached_token := oauth2.Token{AccessToken: "sometoken", Expiry: time.Now().Add(2 * time.Hour)}
-			token_source = oauth2.ReuseTokenSource(c.CachedToken, token_source)
-		}
-		client = oauth2.NewClient(c.ctx, token_source)
-	}
-	if client == nil {
-		return errors.New("Failed to create oauth2 client")
-	}
-	c.Client = client
-	return nil
-}
-
 func DisplayIds(resources interface{}) string {
 	val := reflect.ValueOf(resources)
 	if val.Kind() == reflect.Slice {
@@ -160,21 +112,21 @@ func DisplayIds(resources interface{}) string {
 	return ""
 }
 
-func (c *Connection) api_url(path string) string {
-	u, _ := url.Parse(c.ApiUrl)
+func (c *Client) api_url(path string) string {
+	u, _ := url.Parse(c.Auth.ApiUrl)
 	v := u.Query()
-	if c.AccountId != "" {
-		v.Set("account_id", c.AccountId)
+	if c.Auth.AccountId != "" {
+		v.Set("account_id", c.Auth.AccountId)
 	}
 	u, _ = u.Parse("/1.0" + path)
 	u.RawQuery = v.Encode()
 	return u.String()
 }
 
-func (c *Connection) MakeApiRequest(method string, path string) (*[]byte, error) {
+func (c *Client) MakeApiRequest(method string, path string) (*[]byte, error) {
 	var body []byte
 	var apierror ApiError
-	res, err := c.Client.Get(c.api_url(path))
+	res, err := c.HttpClient.Get(c.api_url(path))
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +143,7 @@ func (c *Connection) MakeApiRequest(method string, path string) (*[]byte, error)
 	}
 }
 
-func (c *Connection) Servers() (*[]Server, *[]byte, error) {
+func (c *Client) Servers() (*[]Server, *[]byte, error) {
 	var servers []Server
 	var body *[]byte
 	body, err := c.MakeApiRequest("get", "/servers")
@@ -205,7 +157,7 @@ func (c *Connection) Servers() (*[]Server, *[]byte, error) {
 	return &servers, body, err
 }
 
-func (c *Connection) Server(identifier string) (*Server, *[]byte, error) {
+func (c *Client) Server(identifier string) (*Server, *[]byte, error) {
 	var server Server
 	var body *[]byte
 	body, err := c.MakeApiRequest("get", "/servers/"+identifier)

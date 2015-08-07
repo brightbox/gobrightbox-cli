@@ -4,8 +4,6 @@ import (
 	"../brightbox"
 	"fmt"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"golang.org/x/oauth2"
-	"reflect"
 )
 
 type ServersCommand struct {
@@ -13,10 +11,6 @@ type ServersCommand struct {
 	Json bool
 	Id   string
 	ClientName string
-}
-
-type TokenSourcer interface {
-	TokenSource() *oauth2.TokenSource
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
@@ -31,9 +25,6 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(reflect.TypeOf(cfg.Conn.Client.Transport),"\n")
-	//tval := reflect.ValueOf(cfg.Conn.Client.Transport)
-	//fmt.Print(cfg.Conn.Client.Transport.Source)
 	if l.Json {
 		if len(*servers) > 0 {
 			fmt.Fprint(w, PrettyPrintJson(*body))
