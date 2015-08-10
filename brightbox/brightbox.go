@@ -1,29 +1,61 @@
 package brightbox
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
-	"reflect"
-	"strings"
 	"time"
 )
 
 type Client struct {
-	Auth       *AuthOptions
-	HttpClient *http.Client
+	BaseURL   *url.URL
+	client    *http.Client
+	UserAgent string
 }
 
-func (c *Client) New(a *AuthOptions) error {
-	c.Auth = a
-	hc, err := a.NewClient()
-	if err != nil {
-		return err
+func NewClient(apiUrl url.URL, httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
-	c.HttpClient = hc
-	return nil
+	c := &Client{
+		client:  httpClient,
+		BaseURL: &apiUrl,
+	}
+	return c
+}
+
+func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
+	rel, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	u := c.BaseURL.ResolveReference(rel)
+
+	var buf io.ReadWriter
+	if body != nil {
+		buf = new(bytes.Buffer)
+		err := json.NewEncoder(buf).Encode(body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	req, err := http.NewRequest(method, u.String(), buf)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+
+	if c.UserAgent != "" {
+		req.Header.Add("User-Agent", c.UserAgent)
+	}
+	return req, nil
 }
 
 type ApiError struct {
@@ -97,70 +129,46 @@ type CloudIP struct {
 	Name       string
 }
 
-func DisplayIds(resources interface{}) string {
-	val := reflect.ValueOf(resources)
-	if val.Kind() == reflect.Slice {
-		var ids = make([]string, val.Len())
-		for i := 0; i < val.Len(); i++ {
-			rval := val.Index(i)
-			if rval.Kind() == reflect.Struct && rval.FieldByName("Id").IsValid() {
-				ids[i] = rval.FieldByName("Id").String()
-			}
-		}
-		return strings.Join(ids, ",")
-	}
-	return ""
-}
-
-func (c *Client) api_url(path string) string {
-	u, _ := url.Parse(c.Auth.ApiUrl)
-	v := u.Query()
-	if c.Auth.AccountId != "" {
-		v.Set("account_id", c.Auth.AccountId)
-	}
-	u, _ = u.Parse("/1.0" + path)
-	u.RawQuery = v.Encode()
-	return u.String()
-}
-
-func (c *Client) MakeApiRequest(method string, path string) (*[]byte, error) {
+func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{} ) (*http.Response, error) {
 	var body []byte
 	var apierror ApiError
-	res, err := c.HttpClient.Get(c.api_url(path))
+	req, err := c.NewRequest(method, path, nil)
 	if err != nil {
 		return nil, err
 	}
-	body, err = ioutil.ReadAll(res.Body)
+	res, err := c.client.Do(req)
+	if err != nil {
+		return res, err
+	}
 	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
 	if res.StatusCode == 200 {
-		return &body, err
+		if resbody != nil {
+			err := json.NewDecoder(res.Body).Decode(resbody)
+			if err != nil {
+				return res, err
+			}
+		}
+		return res, err
 	} else {
 		json.Unmarshal(body, &apierror)
-		return nil, errors.New(apierror.ErrorDescription)
+		// FIXME: was the error parseable?
+		return res, errors.New(apierror.ErrorDescription)
 	}
 }
 
-func (c *Client) Servers() (*[]Server, *[]byte, error) {
+func (c *Client) Servers() (*[]Server, *http.Response, error) {
 	var servers []Server
-	var body *[]byte
-	body, err := c.MakeApiRequest("get", "/servers")
+	res, err := c.MakeApiRequest("GET", "/1.0/servers", nil, &servers)
 	if err != nil {
-		return nil, body, err
+		return nil, res, err
 	}
-	err = json.Unmarshal(*body, &servers)
-	if err != nil {
-		return &servers, body, err
-	}
-	return &servers, body, err
+	return &servers, res, err
 }
 
 func (c *Client) Server(identifier string) (*Server, *[]byte, error) {
 	var server Server
 	var body *[]byte
-	body, err := c.MakeApiRequest("get", "/servers/"+identifier)
+	_, err := c.MakeApiRequest("get", "/1.0/servers/"+identifier, nil, &server)
 	if err != nil {
 		return nil, body, err
 	}

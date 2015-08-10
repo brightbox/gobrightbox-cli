@@ -2,19 +2,23 @@ package cli
 
 import (
 	"../brightbox"
+	"encoding/json"
 	"fmt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/ini.v1"
-	"os/user"
+	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 	"sort"
-	"golang.org/x/oauth2"
-	"encoding/json"
-	"io/ioutil"
+	"net/url"
 )
 
-type ConfigClient struct {
+// Represents a Client section from the config
+// Can also be used as a TokenSource for oauth2 transport
+type Client struct {
 	ClientName     string
 	ClientID       string `ini:"client_id"`
 	Secret         string `ini:"secret"`
@@ -22,18 +26,61 @@ type ConfigClient struct {
 	DefaultAccount string `ini:"default_account"`
 	AuthUrl        string `ini:"auth_url"`
 	Username       string `ini:"username"`
+	tokenCache     *TokenCacher
+	client         *brightbox.Client
+}
+
+func (c *Client) findAuthUrl() (string) {
+	var err error
+	var u *url.URL
+	if c.AuthUrl != "" {
+		u, err = url.Parse(c.AuthUrl)
+	}
+	if u == nil || err != nil {
+		u, err = url.Parse(c.ApiUrl)
+	}
+	if u == nil || err != nil {
+		return ""
+	}
+	rel, _ := url.Parse("/token")
+	u = u.ResolveReference(rel)
+	if u == nil || err != nil {
+		return ""
+	}
+	return u.String()
+}
+
+func (c *Client) Token() (*oauth2.Token, error) {
+	if c.tokenCache == nil {
+		c.tokenCache = &TokenCacher{Key: c.ClientName}
+	}
+	token := c.tokenCache.Read()
+	if token != nil {
+		return token, nil
+	}
+	oc := clientcredentials.Config{
+		ClientID:     c.ClientID,
+		ClientSecret: c.Secret,
+		TokenURL:     c.findAuthUrl(),
+		Scopes:       []string{},
+	}
+	token, err := oc.Token(oauth2.NoContext)
+	if err != nil {
+		return nil, err
+	}
+	c.tokenCache.Write(token)
+	return c.tokenCache.Read(), err
 }
 
 type Config struct {
-	Conn          brightbox.Client
 	App           *kingpin.Application
-	Clients       map[string]ConfigClient
+	Clients       map[string]Client
 	DefaultClient string
-	Client        *ConfigClient
+	Client        *Client
 }
 
 type TokenCacher struct {
-	Key string
+	Key   string
 	token *oauth2.Token
 }
 
@@ -54,6 +101,10 @@ func (tc *TokenCacher) Read() *oauth2.Token {
 	if err != nil {
 		return nil
 	}
+	if token.Valid() == false {
+		tc.Clear()
+		return nil
+	}
 	tc.token = &token
 	return tc.token
 }
@@ -63,7 +114,7 @@ func (tc *TokenCacher) jsonFilename() *string {
 	if dir == nil {
 		return nil
 	}
-	filename := path.Join(*dir, tc.Key + ".oauth_token.json")
+	filename := path.Join(*dir, tc.Key+".oauth_token.json")
 	return &filename
 }
 
@@ -81,7 +132,7 @@ func (tc *TokenCacher) Write(token *oauth2.Token) {
 	if err != nil {
 		return
 	}
-	err = ioutil.WriteFile(*filename, j, 600)
+	err = ioutil.WriteFile(*filename, j, 0600)
 }
 
 func (tc *TokenCacher) Clear() {
@@ -93,19 +144,9 @@ func (tc *TokenCacher) Clear() {
 	os.Remove(*filename)
 }
 
-func (c *Config) Configure() error {
-	c.Conn.New(&brightbox.AuthOptions{
-		ClientID: c.Client.ClientID,
-		ClientSecret: c.Client.Secret,
-		ApiUrl: c.Client.ApiUrl,
-		TokenCache: &TokenCacher{Key: c.Client.ClientName},
-	})
-	return nil
-}
-
 func NewConfig() (*Config, error) {
 	cfg := new(Config)
-	cfg.Clients = make(map[string]ConfigClient)
+	cfg.Clients = make(map[string]Client)
 	err := cfg.readConfig()
 	if err != nil {
 		return cfg, err
@@ -140,7 +181,7 @@ func (c *Config) readConfig() error {
 	c.DefaultClient = core.Key("default_client").String()
 	for _, sec := range cfg.Sections() {
 		if sec.Name() != "DEFAULT" && sec.Name() != "core" {
-			cs := new(ConfigClient)
+			cs := new(Client)
 			cs.ClientName = sec.Name()
 			if cs.ClientName == "" {
 				continue
@@ -166,7 +207,6 @@ func (c *Config) setClient(clientName string) error {
 	client, e := c.Clients[clientName]
 	if e {
 		c.Client = &client
-		//c.Conn.CachedToken = &oauth2.Token{AccessToken: "1540e27f393a77b704c789eb40e7940f76bda1c9"}
 		return nil
 	} else {
 		return fmt.Errorf("client '%s' not found in config.", clientName)
@@ -182,11 +222,9 @@ func NewConfigAndConfigure(clientName string) (*Config, error) {
 	if err != nil {
 		return cfg, err
 	}
-	err = cfg.Configure()
-	if err != nil {
-		return cfg, err
-	}
-	//err = cfg.Conn.Connect()
+	tc := oauth2.NewClient(oauth2.NoContext, cfg.Client)
+	apiUrl, err := url.Parse(cfg.Client.ApiUrl)
+	cfg.Client.client = brightbox.NewClient(*apiUrl, tc)
 	return cfg, err
 }
 
@@ -215,7 +253,7 @@ func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
 			key = "*" + key
 		}
 		listRec(w, key, c.ClientID, c.Secret,
-			c.ApiUrl, c.AuthUrl)
+			c.ApiUrl, c.findAuthUrl())
 	}
 	return nil
 }
