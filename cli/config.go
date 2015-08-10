@@ -2,18 +2,16 @@ package cli
 
 import (
 	"../brightbox"
-	"encoding/json"
 	"fmt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/ini.v1"
-	"io/ioutil"
+	"net/url"
 	"os"
 	"os/user"
 	"path"
 	"sort"
-	"net/url"
 )
 
 // Represents a Client section from the config
@@ -30,7 +28,7 @@ type Client struct {
 	client         *brightbox.Client
 }
 
-func (c *Client) findAuthUrl() (string) {
+func (c *Client) findAuthUrl() string {
 	var err error
 	var u *url.URL
 	if c.AuthUrl != "" {
@@ -77,71 +75,6 @@ type Config struct {
 	Clients       map[string]Client
 	DefaultClient string
 	Client        *Client
-}
-
-type TokenCacher struct {
-	Key   string
-	token *oauth2.Token
-}
-
-func (tc *TokenCacher) Read() *oauth2.Token {
-	if tc.token != nil && tc.token.Valid() == true {
-		return tc.token
-	}
-	filename := tc.jsonFilename()
-	if filename == nil {
-		return nil
-	}
-	token_json, err := ioutil.ReadFile(*filename)
-	if err != nil {
-		return nil
-	}
-	var token oauth2.Token
-	err = json.Unmarshal(token_json, &token)
-	if err != nil {
-		return nil
-	}
-	if token.Valid() == false {
-		tc.Clear()
-		return nil
-	}
-	tc.token = &token
-	return tc.token
-}
-
-func (tc *TokenCacher) jsonFilename() *string {
-	dir := configDirectory()
-	if dir == nil {
-		return nil
-	}
-	filename := path.Join(*dir, tc.Key+".oauth_token.json")
-	return &filename
-}
-
-func (tc *TokenCacher) Write(token *oauth2.Token) {
-	if token == nil {
-		return
-	}
-	// FIXME: make sure token differs from one we already have
-	tc.token = token
-	filename := tc.jsonFilename()
-	if filename == nil {
-		return
-	}
-	j, err := json.Marshal(token)
-	if err != nil {
-		return
-	}
-	err = ioutil.WriteFile(*filename, j, 0600)
-}
-
-func (tc *TokenCacher) Clear() {
-	tc.token = nil
-	filename := tc.jsonFilename()
-	if filename == nil {
-		return
-	}
-	os.Remove(*filename)
 }
 
 func NewConfig() (*Config, error) {
