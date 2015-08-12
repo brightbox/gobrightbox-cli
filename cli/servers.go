@@ -19,7 +19,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 
 	w := tabWriter()
 	defer w.Flush()
-	servers, _, err := cfg.Client.client.Servers()
+	servers, err := cfg.Client.client.Servers()
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, _, err := cfg.Client.client.Server(l.Id)
+	s, err := cfg.Client.client.Server(l.Id)
 	if err != nil {
 		return err
 	}

@@ -139,7 +139,7 @@ type CloudIP struct {
 	Name       string
 }
 
-func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{} ) (*http.Response, error) {
+func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{}) (*http.Response, error) {
 	var body []byte
 	var apierror ApiError
 	req, err := c.NewRequest(method, path, nil)
@@ -166,25 +166,20 @@ func (c *Client) MakeApiRequest(method string, path string, reqbody interface{},
 	}
 }
 
-func (c *Client) Servers() (*[]Server, *http.Response, error) {
+func (c *Client) Servers() (*[]Server, error) {
 	var servers []Server
-	res, err := c.MakeApiRequest("GET", "/1.0/servers", nil, &servers)
+	_, err := c.MakeApiRequest("GET", "/1.0/servers", nil, &servers)
 	if err != nil {
-		return nil, res, err
+		return nil, err
 	}
-	return &servers, res, err
+	return &servers, err
 }
 
-func (c *Client) Server(identifier string) (*Server, *[]byte, error) {
+func (c *Client) Server(identifier string) (*Server, error) {
 	var server Server
-	var body *[]byte
-	_, err := c.MakeApiRequest("get", "/1.0/servers/"+identifier, nil, &server)
+	_, err := c.MakeApiRequest("GET", "/1.0/servers/"+identifier, nil, &server)
 	if err != nil {
-		return nil, body, err
+		return nil, err
 	}
-	err = json.Unmarshal(*body, &server)
-	if err != nil {
-		return &server, body, err
-	}
-	return &server, body, err
+	return &server, err
 }
