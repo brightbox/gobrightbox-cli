@@ -77,11 +77,21 @@ type Server struct {
 	CreatedAt         *time.Time `json:"created_at"`
 	DeletedAt         *time.Time `json:"deleted_at"`
 	ServerType        ServerType `json:"server_type"`
-	CompatabilityMode bool       `json:"compatability_mode"`
+	CompatabilityMode bool       `json:"compatibility_mode"`
 	Zone              Zone
 	Image             Image
 	CloudIPs          []CloudIP `json:"cloud_ips"`
 	Interfaces        []ServerInterface
+	Snapshots         []Image
+	ServerGroups      []ServerGroup `json:"server_groups"`
+}
+
+type ServerGroup struct {
+	Resource
+	Name        string
+	CreatedAt   *time.Time `json:"created_at"`
+	Description string
+	Default     bool
 }
 
 type ServerInterface struct {
@@ -124,8 +134,8 @@ type Image struct {
 type CloudIP struct {
 	Resource
 	Status     string
-	PublicIP   string
-	ReverseDns string
+	PublicIP   string `json:"public_ip"`
+	ReverseDns string `json:"reverse_dns"`
 	Name       string
 }
 

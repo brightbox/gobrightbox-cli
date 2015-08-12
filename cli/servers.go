@@ -2,6 +2,7 @@ package cli
 
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
+	"strings"
 )
 
 type ServersCommand struct {
@@ -44,6 +45,18 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 		return err
 	}
 
+	private_ips := make([]string, len(s.Interfaces))
+	ipv6_ips := make([]string, len(s.Interfaces))
+	for i, iface := range s.Interfaces {
+		private_ips[i] = iface.IPv4Address
+		ipv6_ips[i] = iface.IPv6Address
+	}
+	cloud_ips := make([]string, len(s.CloudIPs))
+	cloud_ip_ids := make([]string, len(s.CloudIPs))
+	for i, cip := range s.CloudIPs {
+		cloud_ips[i] = cip.PublicIP
+		cloud_ip_ids[i] = cip.Id
+	}
 	drawShow(w, []interface{}{
 		"id", s.Id,
 		"status", s.Status,
@@ -62,7 +75,16 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 		"image", s.Image.Id,
 		"image_name", s.Image.Name,
 		"arch", s.Image.Arch,
-		"private_ips", s.Interfaces[0].IPv4Address,
+		"private_ips", strings.Join(private_ips, ", "),
+		"cloud_ips", strings.Join(cloud_ips, ", "),
+		"ipv6_ips", strings.Join(ipv6_ips, ", "),
+		"cloud_ip_ids", strings.Join(cloud_ip_ids, ", "),
+		"hostname", s.Hostname,
+		"fqdn", s.Fqdn,
+		"public_hostname", "public." + s.Fqdn,
+		"ipv6_hostname", "ipv6." + s.Fqdn,
+		"snapshots", DisplayIds(s.Snapshots),
+		"server_groups", DisplayIds(s.ServerGroups),
 	})
 	return nil
 
