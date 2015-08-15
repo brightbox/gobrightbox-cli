@@ -56,18 +56,35 @@ func (c *Client) Token() (*oauth2.Token, error) {
 	if token != nil {
 		return token, nil
 	}
-	oc := clientcredentials.Config{
-		ClientID:     c.ClientID,
-		ClientSecret: c.Secret,
-		TokenURL:     c.findAuthUrl(),
-		Scopes:       []string{},
-	}
-	token, err := oc.Token(oauth2.NoContext)
-	if err != nil {
-		return nil, err
+	var err error
+	if c.Username != "" {
+		var password string
+		fmt.Scanln(&password)
+		oc := oauth2.Config{
+			ClientID: c.ClientID,
+			ClientSecret: c.Secret,
+			Endpoint: oauth2.Endpoint{
+				TokenURL: c.findAuthUrl(),
+			},
+		}
+		token, err = oc.PasswordCredentialsToken(oauth2.NoContext, c.Username, password)
+		if err != nil {
+			return nil, err
+		}		
+	} else {
+		oc := clientcredentials.Config{
+			ClientID:     c.ClientID,
+			ClientSecret: c.Secret,
+			TokenURL:     c.findAuthUrl(),
+			Scopes:       []string{},
+		}
+		token, err = oc.Token(oauth2.NoContext)
+		if err != nil {
+			return nil, err
+		}
 	}
 	c.tokenCache.Write(token)
-	return c.tokenCache.Read(), err
+	return c.tokenCache.Read(), nil
 }
 
 type Config struct {
@@ -146,7 +163,7 @@ func (c *Config) setClient(clientName string) error {
 	}
 }
 
-func NewConfigAndConfigure(clientName string) (*Config, error) {
+func NewConfigAndConfigure(clientName string, accountId *string) (*Config, error) {
 	cfg, err := NewConfig()
 	if err != nil {
 		return cfg, err
@@ -157,7 +174,10 @@ func NewConfigAndConfigure(clientName string) (*Config, error) {
 	}
 	tc := oauth2.NewClient(oauth2.NoContext, cfg.Client)
 	apiUrl, err := url.Parse(cfg.Client.ApiUrl)
-	cfg.Client.client = brightbox.NewClient(*apiUrl, tc)
+	if accountId == nil || *accountId == "" {
+		accountId = &cfg.Client.DefaultAccount
+	}
+	cfg.Client.client = brightbox.NewClient(*apiUrl, accountId, tc)
 	return cfg, err
 }
 
@@ -216,7 +236,7 @@ func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func ConfigureServersCommand(app *kingpin.Application) {
+func ConfigureConfigCommand(app *CliApp) {
 	c := &ConfigCommand{}
 	configcmd := app.Command("config", "manage cli configuration")
 	configcmd.Command("list", "list local client configurations").Action(c.list)

@@ -4,36 +4,37 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-type ServersCommand struct {
+type AccountsCommand struct {
 	App        *CliApp
 	All        bool
 	Id         string
+	ClientName string
+	AccountId  string
 }
 
-func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
+func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
+	cfg, err := NewConfigAndConfigure(l.ClientName, &l.AccountId)
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 	defer w.Flush()
-	servers, err := cfg.Client.client.Servers()
+	accounts, err := cfg.Client.client.Accounts()
 	if err != nil {
 		return err
 	}
-	listRec(w, "ID", "STATUS", "TYPE", "ZONE", "CREATED", "IMAGE", "CLOUDIPS", "NAME")
-	for _, s := range *servers {
+	listRec(w, "ID", "RAM_USED", "ROLE", "NAME")
+	for _, a := range *accounts {
 		listRec(
-			w, s.Id, s.Status, s.ServerType.Handle,
-			s.Zone.Handle, s.CreatedAt.Format("2006-01-02"),
-			s.Image.Id, collectById(s.CloudIPs), s.Name)
+			w, a.Id, a.RamUsed, "",
+			a.Name)
 	}
 	return nil
 }
 
-func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
+func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
+	cfg, err := NewConfigAndConfigure(l.ClientName, &l.AccountId)
 	if err != nil {
 		return err
 	}
@@ -77,11 +78,12 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func ConfigureServersCommand(app *CliApp) {
-	cmd := new(ServersCommand)
+func ConfigureAccountsCommand(app *CliApp) {
+	cmd := new(AccountsCommand)
 	cmd.App = app
-	servers := app.Command("servers", "manage cloud servers")
-	servers.Command("list", "list cloud servers").Action(cmd.list)
-	show := servers.Command("show", "view details on cloud servers").Action(cmd.show)
+	accounts := app.Command("accounts", "manage accounts")
+	accounts.Command("list", "list accounts").Action(cmd.list)
+	show := accounts.Command("show", "view details of an account").Action(cmd.show)
 	show.Arg("identifier", "identifier of server to show").Required().StringVar(&cmd.Id)
 }
+

@@ -1,17 +1,12 @@
 package main
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"./cli"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func main() {
-	app := kingpin.New("brightbox", "Bleh")
-	cli.ConfigureServersCommand(app)
-	cli.ConfigureConfigCommand(app)
-	//kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version("0.1").Author("John Leach")
-	kingpin.MustParse(app.Parse(os.Args[1:]))
-	//kingpin.Parse()
-	//fmt.Printf("%v, %s\n", *verbose, *name)
+	cliapp := cli.New()
+	kingpin.MustParse(cliapp.Parse(os.Args[1:]))
 }

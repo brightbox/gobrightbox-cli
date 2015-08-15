@@ -43,17 +43,25 @@ func PrettyPrintJson(body []byte) *bytes.Buffer {
 	return &out
 }
 
-func DisplayIds(resources interface{}) string {
+func collectById(resources interface{}) string {
+	return collectByField(resources, "Id")
+}
+
+func collectByField(resources interface{}, name string) string {
 	val := reflect.ValueOf(resources)
-	if val.Kind() == reflect.Slice {
-		var ids = make([]string, val.Len())
-		for i := 0; i < val.Len(); i++ {
-			rval := val.Index(i)
-			if rval.Kind() == reflect.Struct && rval.FieldByName("Id").IsValid() {
-				ids[i] = rval.FieldByName("Id").String()
-			}
-		}
-		return strings.Join(ids, ",")
+	if val.Kind() != reflect.Slice {
+		return ""
 	}
-	return ""
+	var ids = make([]string, val.Len())
+	for i := 0; i < val.Len(); i++ {
+		rval := val.Index(i)
+		if rval.Kind() != reflect.Struct {
+			continue
+		}
+		if !rval.FieldByName(name).IsValid() {
+			continue
+		}
+		ids[i] = rval.FieldByName(name).String()
+	}
+	return strings.Join(ids, ",")
 }
