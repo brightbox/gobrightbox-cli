@@ -182,8 +182,6 @@ func NewConfigAndConfigure(clientName string, accountId *string) (*Config, error
 }
 
 type ConfigCommand struct {
-	All  bool
-	Json bool
 	Id   string
 }
 

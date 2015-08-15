@@ -78,8 +78,7 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureServersCommand(app *CliApp) {
-	cmd := new(ServersCommand)
-	cmd.App = app
+	cmd := ServersCommand{App: app}
 	servers := app.Command("servers", "manage cloud servers")
 	servers.Command("list", "list cloud servers").Action(cmd.list)
 	show := servers.Command("show", "view details on cloud servers").Action(cmd.show)

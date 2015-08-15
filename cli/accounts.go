@@ -6,14 +6,11 @@ import (
 
 type AccountsCommand struct {
 	App        *CliApp
-	All        bool
 	Id         string
-	ClientName string
-	AccountId  string
 }
 
 func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.ClientName, &l.AccountId)
+	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
 	if err != nil {
 		return err
 	}
@@ -34,7 +31,7 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.ClientName, &l.AccountId)
+	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
 	if err != nil {
 		return err
 	}
@@ -79,8 +76,7 @@ func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureAccountsCommand(app *CliApp) {
-	cmd := new(AccountsCommand)
-	cmd.App = app
+	cmd := AccountsCommand{App: app}
 	accounts := app.Command("accounts", "manage accounts")
 	accounts.Command("list", "list accounts").Action(cmd.list)
 	show := accounts.Command("show", "view details of an account").Action(cmd.show)
