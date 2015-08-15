@@ -3,7 +3,7 @@ package brightbox
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -141,7 +141,6 @@ type CloudIP struct {
 
 func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{}) (*http.Response, error) {
 	var body []byte
-	var apierror ApiError
 	req, err := c.NewRequest(method, path, nil)
 	if err != nil {
 		return nil, err
@@ -160,26 +159,26 @@ func (c *Client) MakeApiRequest(method string, path string, reqbody interface{},
 		}
 		return res, err
 	} else {
-		json.Unmarshal(body, &apierror)
-		// FIXME: was the error parseable?
-		return res, errors.New(apierror.ErrorDescription)
+		apierr := new(ApiError)
+		json.Unmarshal(body, apierr)
+		return res, fmt.Errorf("%s: %s %s", res.Status, res.Request.URL.String(),apierr.ErrorDescription)
 	}
 }
 
 func (c *Client) Servers() (*[]Server, error) {
-	var servers []Server
-	_, err := c.MakeApiRequest("GET", "/1.0/servers", nil, &servers)
+	servers := new([]Server)
+	_, err := c.MakeApiRequest("GET", "/1.0/servers", nil, servers)
 	if err != nil {
 		return nil, err
 	}
-	return &servers, err
+	return servers, err
 }
 
 func (c *Client) Server(identifier string) (*Server, error) {
-	var server Server
-	_, err := c.MakeApiRequest("GET", "/1.0/servers/"+identifier, nil, &server)
+	server := new(Server)
+	_, err := c.MakeApiRequest("GET", "/1.0/servers/"+identifier, nil, server)
 	if err != nil {
 		return nil, err
 	}
-	return &server, err
+	return server, err
 }
