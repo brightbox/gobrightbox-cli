@@ -11,14 +11,14 @@ type ServersCommand struct {
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
+	err := l.App.Configure()
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 	defer w.Flush()
-	servers, err := cfg.Client.client.Servers()
+	servers, err := l.App.Client.Servers()
 	if err != nil {
 		return err
 	}
@@ -33,13 +33,13 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
+	err := l.App.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, err := cfg.Client.client.Server(l.Id)
+	s, err := l.App.Client.Server(l.Id)
 	if err != nil {
 		l.App.Fatalf(err.Error())
 	}

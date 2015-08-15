@@ -10,14 +10,14 @@ type AccountsCommand struct {
 }
 
 func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
+	err := l.App.Configure()
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 	defer w.Flush()
-	accounts, err := cfg.Client.client.Accounts()
+	accounts, err := l.App.Client.Accounts()
 	if err != nil {
 		return err
 	}
@@ -31,13 +31,13 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfigAndConfigure(l.App.ClientName, &l.App.AccountId)
+	err := l.App.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, err := cfg.Client.client.Server(l.Id)
+	s, err := l.App.Client.Server(l.Id)
 	if err != nil {
 		l.App.Fatalf(err.Error())
 	}

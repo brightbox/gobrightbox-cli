@@ -17,6 +17,7 @@ import (
 // Represents a Client section from the config
 // Can also be used as a TokenSource for oauth2 transport
 type Client struct {
+	*brightbox.Client
 	ClientName     string
 	ClientID       string `ini:"client_id"`
 	Secret         string `ini:"secret"`
@@ -25,7 +26,6 @@ type Client struct {
 	AuthUrl        string `ini:"auth_url"`
 	Username       string `ini:"username"`
 	tokenCache     *TokenCacher
-	client         *brightbox.Client
 }
 
 func (c *Client) findAuthUrl() string {
@@ -177,7 +177,7 @@ func NewConfigAndConfigure(clientName string, accountId *string) (*Config, error
 	if accountId == nil || *accountId == "" {
 		accountId = &cfg.Client.DefaultAccount
 	}
-	cfg.Client.client = brightbox.NewClient(*apiUrl, accountId, tc)
+	cfg.Client.Client = brightbox.NewClient(*apiUrl, accountId, tc)
 	return cfg, err
 }
 

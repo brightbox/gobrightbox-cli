@@ -8,6 +8,8 @@ type CliApp struct {
 	*kingpin.Application
 	ClientName string
 	AccountId string
+	Config *Config
+	Client *Client
 }
 
 func New() *CliApp {
@@ -22,3 +24,13 @@ func New() *CliApp {
 	return a
 }
 
+func (c *CliApp) Configure() error {
+	cfg, err := NewConfigAndConfigure(c.ClientName, &c.AccountId)
+
+	if err != nil {
+		return err
+	}
+	c.Config = cfg
+	c.Client = cfg.Client
+	return nil
+}
