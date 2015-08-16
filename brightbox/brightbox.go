@@ -36,7 +36,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	if err != nil {
 		return nil, err
 	}
-	
+
 	u := c.BaseURL.ResolveReference(rel)
 
 	if c.AccountId != "" {
@@ -96,13 +96,6 @@ type Server struct {
 	ServerGroups      []ServerGroup `json:"server_groups"`
 }
 
-type ServerGroup struct {
-	Resource
-	Name        string
-	CreatedAt   *time.Time `json:"created_at"`
-	Description string
-	Default     bool
-}
 
 type ServerInterface struct {
 	Resource
@@ -151,20 +144,20 @@ type CloudIP struct {
 
 type Account struct {
 	Resource
-	Name string
-	Status string
-	Address1 string `json:"address_1"`
-	Address2 string `json:"address_2"`
-	City string
-	County string
-	Postcode string
-	CountryCode string
-	CountryName string
+	Name                  string
+	Status                string
+	Address1              string `json:"address_1"`
+	Address2              string `json:"address_2"`
+	City                  string
+	County                string
+	Postcode              string
+	CountryCode           string
+	CountryName           string
 	VatRegistrationNumber string `json:"vat_registration_number"`
-	TelephoneNumber string `json:"telephone_number"`
-	TelephoneVerified bool `json:"telephone_verified"`
-	VerifiedTelephone string `json:"verified_telephone"`
-	RamUsed int `json:"ram_used"`
+	TelephoneNumber       string `json:"telephone_number"`
+	TelephoneVerified     bool   `json:"telephone_verified"`
+	VerifiedTelephone     string `json:"verified_telephone"`
+	RamUsed               int    `json:"ram_used"`
 }
 
 func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{}) (*http.Response, error) {
@@ -219,3 +212,4 @@ func (c *Client) Accounts() (*[]Account, error) {
 	}
 	return accounts, err
 }
+
