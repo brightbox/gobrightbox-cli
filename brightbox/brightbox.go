@@ -17,6 +17,15 @@ type Client struct {
 	AccountId string
 }
 
+type ApiError struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+type Resource struct {
+	Id string
+}
+
 func NewClient(apiUrl url.URL, accountId *string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
@@ -68,41 +77,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
-type ApiError struct {
-	Error            string `json:"error"`
-	ErrorDescription string `json:"error_description"`
-}
-
-type Resource struct {
-	Id string
-}
-
-type Server struct {
-	Resource
-	Name              string
-	Status            string
-	Locked            bool
-	Hostname          string
-	Fqdn              string
-	CreatedAt         *time.Time `json:"created_at"`
-	DeletedAt         *time.Time `json:"deleted_at"`
-	ServerType        ServerType `json:"server_type"`
-	CompatabilityMode bool       `json:"compatibility_mode"`
-	Zone              Zone
-	Image             Image
-	CloudIPs          []CloudIP `json:"cloud_ips"`
-	Interfaces        []ServerInterface
-	Snapshots         []Image
-	ServerGroups      []ServerGroup `json:"server_groups"`
-}
-
-
-type ServerInterface struct {
-	Resource
-	MacAddress  string `json:"mac_address"`
-	IPv4Address string `json:"ipv4_address"`
-	IPv6Address string `json:"ipv6_address"`
-}
 
 type ServerType struct {
 	Resource
@@ -142,24 +116,6 @@ type CloudIP struct {
 	Name       string
 }
 
-type Account struct {
-	Resource
-	Name                  string
-	Status                string
-	Address1              string `json:"address_1"`
-	Address2              string `json:"address_2"`
-	City                  string
-	County                string
-	Postcode              string
-	CountryCode           string
-	CountryName           string
-	VatRegistrationNumber string `json:"vat_registration_number"`
-	TelephoneNumber       string `json:"telephone_number"`
-	TelephoneVerified     bool   `json:"telephone_verified"`
-	VerifiedTelephone     string `json:"verified_telephone"`
-	RamUsed               int    `json:"ram_used"`
-}
-
 func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{}) (*http.Response, error) {
 	var body []byte
 	req, err := c.NewRequest(method, path, nil)
@@ -185,31 +141,3 @@ func (c *Client) MakeApiRequest(method string, path string, reqbody interface{},
 		return res, fmt.Errorf("%s: %s %s", res.Status, res.Request.URL.String(), apierr.ErrorDescription)
 	}
 }
-
-func (c *Client) Servers() (*[]Server, error) {
-	servers := new([]Server)
-	_, err := c.MakeApiRequest("GET", "/1.0/servers", nil, servers)
-	if err != nil {
-		return nil, err
-	}
-	return servers, err
-}
-
-func (c *Client) Server(identifier string) (*Server, error) {
-	server := new(Server)
-	_, err := c.MakeApiRequest("GET", "/1.0/servers/"+identifier, nil, server)
-	if err != nil {
-		return nil, err
-	}
-	return server, err
-}
-
-func (c *Client) Accounts() (*[]Account, error) {
-	accounts := new([]Account)
-	_, err := c.MakeApiRequest("GET", "/1.0/accounts", nil, accounts)
-	if err != nil {
-		return nil, err
-	}
-	return accounts, err
-}
-
