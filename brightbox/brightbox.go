@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -18,8 +19,36 @@ type Client struct {
 }
 
 type ApiError struct {
-	Error            string `json:"error"`
-	ErrorDescription string `json:"error_description"`
+	StatusCode           int
+	Status               string
+	AuthError            string   `json:"error"`
+	AuthErrorDescription string   `json:"error_description"`
+	ErrorName            string   `json:"error_name"`
+	Errors               []string `json:"errors"`
+	ParseError           *error
+	RequestUrl           *url.URL
+	ResponseBody         *[]byte
+}
+
+func (e ApiError) Error() string {
+	var url string
+	if e.RequestUrl != nil {
+		url = e.RequestUrl.String()
+	}
+	var msg string
+	if e.AuthError != "" {
+		msg = fmt.Sprintf("%s, %s", e.AuthError, e.AuthErrorDescription)
+	}
+	if e.ErrorName != "" {
+		msg = e.ErrorName
+		if len(e.Errors) == 1 {
+			msg = msg + ": " + e.Errors[0]
+		} else if len(e.Errors) > 1 {
+			msg = fmt.Sprintf("%s: %s", msg, e.Errors)
+		}
+
+	}
+	return fmt.Sprintf("%s: %s: %s", e.Status, url, msg)
 }
 
 type Resource struct {
@@ -77,7 +106,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
-
 type ServerType struct {
 	Resource
 	Name     string
@@ -116,9 +144,8 @@ type CloudIP struct {
 	Name       string
 }
 
-func (c *Client) MakeApiRequest(method string, path string, reqbody interface{}, resbody interface{}) (*http.Response, error) {
-	var body []byte
-	req, err := c.NewRequest(method, path, nil)
+func (c *Client) MakeApiRequest(method string, path string, reqBody interface{}, resBody interface{}) (*http.Response, error) {
+	req, err := c.NewRequest(method, path, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -127,17 +154,28 @@ func (c *Client) MakeApiRequest(method string, path string, reqbody interface{},
 		return res, err
 	}
 	defer res.Body.Close()
-	if res.StatusCode == 200 {
-		if resbody != nil {
-			err := json.NewDecoder(res.Body).Decode(resbody)
+	if res.StatusCode >= 200 && res.StatusCode <= 299 {
+		if resBody != nil {
+			err := json.NewDecoder(res.Body).Decode(resBody)
 			if err != nil {
-				return res, err
+				return res, ApiError{
+					RequestUrl: res.Request.URL,
+					StatusCode: res.StatusCode,
+					Status:     res.Status,
+					ParseError: &err,
+				}
 			}
 		}
-		return res, err
+		return res, nil
 	} else {
-		apierr := new(ApiError)
-		json.Unmarshal(body, apierr)
-		return res, fmt.Errorf("%s: %s %s", res.Status, res.Request.URL.String(), apierr.ErrorDescription)
+		apierr := ApiError{
+			RequestUrl: res.Request.URL,
+			StatusCode: res.StatusCode,
+			Status:     res.Status,
+		}
+		body, _ := ioutil.ReadAll(res.Body)
+		err = json.Unmarshal(body, &apierr)
+		apierr.ResponseBody = &body
+		return res, apierr
 	}
 }
