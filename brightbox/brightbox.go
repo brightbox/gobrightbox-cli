@@ -48,7 +48,10 @@ func (e ApiError) Error() string {
 		}
 
 	}
-	return fmt.Sprintf("%s: %s: %s", e.Status, url, msg)
+	if msg == "" {
+		msg = fmt.Sprintf("%s: %s: %s", e.StatusCode, url)
+	}
+	return msg
 }
 
 type Resource struct {

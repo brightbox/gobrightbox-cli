@@ -22,6 +22,7 @@ func New() *CliApp {
 	ConfigureConfigCommand(a)
 	ConfigureAccountsCommand(a)
 	ConfigureServerGroupsCommand(a)
+	ConfigureTokenCommand(a)
 	return a
 }
 
