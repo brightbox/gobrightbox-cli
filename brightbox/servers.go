@@ -67,3 +67,11 @@ func (c *Client) CreateServer(newServer *CreateServerOptions) (*Server, error) {
 	}
 	return server, nil
 }
+
+func (c *Client) DestroyServer(identifier string) (error) {
+	_, err := c.MakeApiRequest("DELETE", "/1.0/servers/"+identifier, nil, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}

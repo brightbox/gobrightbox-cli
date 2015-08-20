@@ -14,6 +14,7 @@ type ServersCommand struct {
 	App        *CliApp
 	All        bool
 	Id         string
+	IdList     []string
 	ImageId    string
 	Name       string
 	ServerType string
@@ -168,6 +169,21 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 
 }
 
+func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Destroying server %s\n", id)
+		err := l.App.Client.DestroyServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
 func ConfigureServersCommand(app *CliApp) {
 	cmd := ServersCommand{App: app}
 	servers := app.Command("servers", "Manage cloud servers")
@@ -183,4 +199,6 @@ func ConfigureServersCommand(app *CliApp) {
 	create.Flag("user-data", "Specify the user data as a string").PlaceHolder("USERDATA").StringVar(&cmd.UserData)
 	create.Flag("user-data-file", "Specify the user data from local file").PlaceHolder("FILENAME").OpenFileVar(&cmd.UserDataFile, 0, 0)
 	create.Flag("base64", "Base64 encode the user data (default: true)").Default("true").BoolVar(&cmd.Base64)
+	destroy := servers.Command("destroy", "Destroy a cloud server").Action(cmd.destroy)
+	destroy.Arg("identifier", "Identifier of server to destroy").Required().StringsVar(&cmd.IdList)
 }
