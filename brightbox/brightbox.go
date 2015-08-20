@@ -109,21 +109,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
-type ServerType struct {
-	Resource
-	Name     string
-	Status   string
-	Handle   string
-	Cores    int
-	Ram      int
-	DiskSize int `json:"disk_size"`
-}
-
-type Zone struct {
-	Resource
-	Handle string
-}
-
 type Image struct {
 	Resource
 	Name        string

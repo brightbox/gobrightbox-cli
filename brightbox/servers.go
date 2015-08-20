@@ -23,6 +23,16 @@ type Server struct {
 	ServerGroups      []ServerGroup `json:"server_groups"`
 }
 
+type CreateServerOptions struct {
+	Identifier string `json:"-"`
+	Image string `json:"image"`
+	Name string `json:"name,omitempty"`
+	ServerType string `json:"server_type,omitempty"`
+	Zone string `json:"zone,omitempty"`
+	UserData string `json:"user_data,omitempty"`
+	ServerGroups []string `json:"server_groups,omitempty"`
+}
+
 
 type ServerInterface struct {
 	Resource
@@ -49,3 +59,11 @@ func (c *Client) Server(identifier string) (*Server, error) {
 	return server, err
 }
 
+func (c *Client) CreateServer(newServer *CreateServerOptions) (*Server, error) {
+	server := new(Server)
+	_, err := c.MakeApiRequest("POST", "/1.0/servers", newServer, &server)
+	if err != nil {
+		return nil, err
+	}
+	return server, nil
+}
