@@ -1,13 +1,27 @@
 package cli
 
 import (
+	"../brightbox"
+	"encoding/base64"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"strings"
+	"os"
+	"io/ioutil"
+	"fmt"
 )
 
 type ServersCommand struct {
 	App        *CliApp
 	All        bool
 	Id         string
+	ImageId    string
+	Name       string
+	ServerType string
+	Zone       string
+	Groups     string
+	UserData   string
+	UserDataFile *os.File
+	Base64     bool
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
@@ -77,10 +91,96 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
+func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	w := tabWriter()
+	defer w.Flush()
+	newServer := brightbox.CreateServerOptions{
+		Image: l.ImageId,
+		Name:  l.Name,
+	}
+
+	if l.Zone != "" {
+		zoneId, err := l.App.Client.resolveZoneId(l.Zone)
+		if err != nil {
+			return err
+		}
+		newServer.Zone = zoneId
+	}
+
+	if l.ServerType != "" {
+		typeId, err := l.App.Client.resolveServerTypeId(l.ServerType)
+		if err != nil {
+			return err
+		}
+		newServer.ServerType = typeId
+	}
+
+	if l.Groups != "" {
+		groups := strings.Split(l.Groups, ",")
+		if len(groups) > 1 || (len(groups) == 1 && groups[0] != "") {
+			newServer.ServerGroups = groups
+		}
+	}
+
+	var userData []byte
+	if l.UserData != "" {
+		userData = []byte(l.UserData)
+	}
+	if l.UserDataFile != nil {
+		defer l.UserDataFile.Close()
+		fi, err := l.UserDataFile.Stat()
+		if err != nil {
+			return err
+		}
+		if fi.Size() > 2<<13 {
+			return fmt.Errorf("User data file cannot exceed 16k")
+		}
+		userData, err = ioutil.ReadAll(l.UserDataFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(userData) > 0 && l.Base64 {
+		newServer.UserData = base64.StdEncoding.EncodeToString(userData)
+	} else if len(userData) > 0 {
+		newServer.UserData = string(userData)
+	}
+	if len(newServer.UserData) > 2<<13 {
+		return fmt.Errorf("User data cannot exceed 16k")
+	}
+
+	server, err := l.App.Client.CreateServer(&newServer)
+	if err != nil {
+		return err
+	}
+	listRec(w, "ID", "STATUS", "TYPE", "ZONE", "CREATED", "IMAGE", "CLOUDIPS", "NAME")
+	s := server
+	listRec(
+		w, s.Id, s.Status, s.ServerType.Handle,
+		s.Zone.Handle, s.CreatedAt.Format("2006-01-02"),
+		s.Image.Id, collectById(s.CloudIPs), s.Name)
+	return nil
+
+}
+
 func ConfigureServersCommand(app *CliApp) {
 	cmd := ServersCommand{App: app}
-	servers := app.Command("servers", "manage cloud servers")
-	servers.Command("list", "list cloud servers").Action(cmd.list)
-	show := servers.Command("show", "view details on cloud servers").Action(cmd.show)
-	show.Arg("identifier", "identifier of server to show").Required().StringVar(&cmd.Id)
+	servers := app.Command("servers", "Manage cloud servers")
+	servers.Command("list", "List cloud servers").Action(cmd.list)
+	show := servers.Command("show", "View details on a cloud server").Action(cmd.show)
+	show.Arg("identifier", "Identifier of server to show").Required().StringVar(&cmd.Id)
+	create := servers.Command("create", "Create a new cloud server").Action(cmd.create)
+	create.Arg("image identifier", "Identifier of image with which to create the server").Required().StringVar(&cmd.ImageId)
+	create.Flag("name", "Name to give the new server").Short('n').StringVar(&cmd.Name)
+	create.Flag("type", "Server type for the new server").Short('t').StringVar(&cmd.ServerType)
+	create.Flag("zone", "Availability zone in which to place the new server").Short('z').StringVar(&cmd.Zone)
+	create.Flag("groups", "The server groups to which the new server should belong. Comma separate multiple groups.").Short('g').StringVar(&cmd.Groups)
+	create.Flag("user-data", "Specify the user data as a string").PlaceHolder("USERDATA").StringVar(&cmd.UserData)
+	create.Flag("user-data-file", "Specify the user data from local file").PlaceHolder("FILENAME").OpenFileVar(&cmd.UserDataFile, 0, 0)
+	create.Flag("base64", "Base64 encode the user data (default: true)").Default("true").BoolVar(&cmd.Base64)
 }
