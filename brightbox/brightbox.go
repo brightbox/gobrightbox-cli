@@ -112,14 +112,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
-type CloudIP struct {
-	Resource
-	Status     string
-	PublicIP   string `json:"public_ip"`
-	ReverseDns string `json:"reverse_dns"`
-	Name       string
-}
-
 func (c *Client) MakeApiRequest(method string, path string, reqBody interface{}, resBody interface{}) (*http.Response, error) {
 	req, err := c.NewRequest(method, path, reqBody)
 	if err != nil {
