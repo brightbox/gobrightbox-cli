@@ -2,6 +2,7 @@ package cli
 
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
+	"strings"
 )
 
 type CliApp struct {
@@ -23,6 +24,7 @@ func New() *CliApp {
 	ConfigureAccountsCommand(a)
 	ConfigureServerGroupsCommand(a)
 	ConfigureTokenCommand(a)
+	ConfigureImagesCommand(a)
 	return a
 }
 
@@ -35,4 +37,19 @@ func (c *CliApp) Configure() error {
 	c.Config = cfg
 	c.Client = cfg.Client
 	return nil
+}
+
+// Try to get an account id for the connection, either as specified in the
+// config or by looking up the api client id
+func (c *CliApp) accountId() string {
+	if c.AccountId != "" {
+		return c.AccountId
+	}
+	if strings.HasPrefix(c.Client.ClientID, "cli-") {
+		apiClient, err := c.Client.ApiClient(c.Client.ClientID)
+		if err == nil {
+			return apiClient.Account.Id
+		}
+	}
+	return ""
 }

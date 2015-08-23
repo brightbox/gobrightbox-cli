@@ -42,7 +42,7 @@ func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
 			"expiry", token.Expiry,
 		})
 	case "curl":
-		fmt.Fprintf(w, "curl -H 'Authorization: OAuth %s' %s\n", token.AccessToken, l.App.Client.ApiUrl)
+		fmt.Fprintf(w, "curl -H 'Authorization: Bearer %s' %s\n", token.AccessToken, l.App.Client.ApiUrl)
 	}
 
 	return nil
