@@ -25,6 +25,7 @@ func New() *CliApp {
 	ConfigureServerGroupsCommand(a)
 	ConfigureTokenCommand(a)
 	ConfigureImagesCommand(a)
+	ConfigureCloudIPsCommand(a)
 	return a
 }
 
