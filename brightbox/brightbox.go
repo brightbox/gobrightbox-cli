@@ -34,6 +34,10 @@ func (e ApiError) Error() string {
 	if e.RequestUrl != nil {
 		url = e.RequestUrl.String()
 	}
+	if e.ParseError != nil {
+		return fmt.Sprintf("%d: %s: %s", e.StatusCode, url, *e.ParseError)
+	}
+
 	var msg string
 	if e.AuthError != "" {
 		msg = fmt.Sprintf("%s, %s", e.AuthError, e.AuthErrorDescription)
@@ -48,7 +52,7 @@ func (e ApiError) Error() string {
 
 	}
 	if msg == "" {
-		msg = fmt.Sprintf("%s: %s: %s", e.StatusCode, url)
+		msg = fmt.Sprintf("%s: %s", e.Status, url)
 	}
 	return msg
 }
