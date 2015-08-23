@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 type Client struct {
@@ -107,21 +106,6 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 		req.Header.Add("User-Agent", c.UserAgent)
 	}
 	return req, nil
-}
-
-type Image struct {
-	Resource
-	Name        string
-	Username    string
-	Status      string
-	Locked      bool
-	Description string
-	Source      string
-	Arch        string
-	CreatedAt   time.Time `json:"created_at"`
-	Official    bool
-	Public      bool
-	Owner       string
 }
 
 type CloudIP struct {
