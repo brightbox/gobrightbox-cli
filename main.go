@@ -1,9 +1,9 @@
 package main
 
 import (
-	"os"
-	"./cli"
+	"github.com/brightbox/gobrightbox-cli/cli"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
 )
 
 func main() {

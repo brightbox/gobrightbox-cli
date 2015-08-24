@@ -1,25 +1,25 @@
 package cli
 
 import (
-	"../brightbox"
+	"fmt"
+	"github.com/brightbox/gobrightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
-	"fmt"
 )
 
 type CloudIPsCommand struct {
-	App        *CliApp
-	All        bool
-	Id         string
-	IdList     []string
-	ImageId    string
-	Name       string
-	CloudIPType string
-	Zone       string
-	Groups     string
-	UserData   string
+	App          *CliApp
+	All          bool
+	Id           string
+	IdList       []string
+	ImageId      string
+	Name         string
+	CloudIPType  string
+	Zone         string
+	Groups       string
+	UserData     string
 	UserDataFile *os.File
-	Base64     bool
+	Base64       bool
 }
 
 func cloudIPDestinationId(cip *brightbox.CloudIP) string {

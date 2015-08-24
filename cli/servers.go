@@ -1,28 +1,28 @@
 package cli
 
 import (
-	"../brightbox"
 	"encoding/base64"
-	"gopkg.in/alecthomas/kingpin.v2"
-	"strings"
-	"os"
-	"io/ioutil"
 	"fmt"
+	"github.com/brightbox/gobrightbox"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 type ServersCommand struct {
-	App        *CliApp
-	All        bool
-	Id         string
-	IdList     []string
-	ImageId    string
-	Name       string
-	ServerType string
-	Zone       string
-	Groups     string
-	UserData   string
+	App          *CliApp
+	All          bool
+	Id           string
+	IdList       []string
+	ImageId      string
+	Name         string
+	ServerType   string
+	Zone         string
+	Groups       string
+	UserData     string
 	UserDataFile *os.File
-	Base64     bool
+	Base64       bool
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {

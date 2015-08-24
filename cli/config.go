@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"../brightbox"
 	"fmt"
+	"github.com/brightbox/gobrightbox"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -61,7 +61,7 @@ func (c *Client) Token() (*oauth2.Token, error) {
 		var password string
 		fmt.Scanln(&password)
 		oc := oauth2.Config{
-			ClientID: c.ClientID,
+			ClientID:     c.ClientID,
 			ClientSecret: c.Secret,
 			Endpoint: oauth2.Endpoint{
 				TokenURL: c.findAuthUrl(),
@@ -70,7 +70,7 @@ func (c *Client) Token() (*oauth2.Token, error) {
 		token, err = oc.PasswordCredentialsToken(oauth2.NoContext, c.Username, password)
 		if err != nil {
 			return nil, err
-		}		
+		}
 	} else {
 		oc := clientcredentials.Config{
 			ClientID:     c.ClientID,
@@ -182,7 +182,7 @@ func NewConfigAndConfigure(clientName string, accountId *string) (*Config, error
 }
 
 type ConfigCommand struct {
-	Id   string
+	Id string
 }
 
 func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {

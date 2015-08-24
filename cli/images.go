@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"../brightbox"
+	"github.com/brightbox/gobrightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sort"
 )
@@ -15,7 +15,7 @@ type ImagesCommand struct {
 
 type imagesForDisplay []brightbox.Image
 
-func (il imagesForDisplay) Len() int { return len(il) }
+func (il imagesForDisplay) Len() int      { return len(il) }
 func (il imagesForDisplay) Swap(i, j int) { il[i], il[j] = il[j], il[i] }
 func (il imagesForDisplay) Less(i, j int) bool {
 	a := il.sortKeys(i)
@@ -66,7 +66,7 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 
 	w := tabWriter()
 	defer w.Flush()
-	
+
 	images, err := l.App.Client.Images()
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 	}
 	sort.Sort(sortedImages)
 
-	accountId := <- achan
+	accountId := <-achan
 
 	listRec(w, "ID", "OWNER", "TYPE", "CREATED", "STATUS", "SIZE", "NAME")
 	for _, i := range sortedImages {
