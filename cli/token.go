@@ -1,15 +1,15 @@
 package cli
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type TokenCommand struct {
-	App   *CliApp
-	Id    string
-	Force bool
+	App    *CliApp
+	Id     string
+	Force  bool
 	Format string
 }
 

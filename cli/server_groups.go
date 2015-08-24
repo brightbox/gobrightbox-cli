@@ -5,8 +5,8 @@ import (
 )
 
 type ServerGroupsCommand struct {
-	App        *CliApp
-	Id         string
+	App *CliApp
+	Id  string
 }
 
 func (l *ServerGroupsCommand) list(pc *kingpin.ParseContext) error {
@@ -80,4 +80,3 @@ func ConfigureServerGroupsCommand(app *CliApp) {
 	show := groups.Command("show", "view details of a server group").Action(cmd.show)
 	show.Arg("identifier", "identifier of server group to show").Required().StringVar(&cmd.Id)
 }
-

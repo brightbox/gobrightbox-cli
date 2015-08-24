@@ -8,9 +8,9 @@ import (
 type CliApp struct {
 	*kingpin.Application
 	ClientName string
-	AccountId string
-	Config *Config
-	Client *Client
+	AccountId  string
+	Config     *Config
+	Client     *Client
 }
 
 func New() *CliApp {

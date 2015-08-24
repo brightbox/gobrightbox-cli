@@ -5,8 +5,8 @@ import (
 )
 
 type AccountsCommand struct {
-	App        *CliApp
-	Id         string
+	App *CliApp
+	Id  string
 }
 
 func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
@@ -82,4 +82,3 @@ func ConfigureAccountsCommand(app *CliApp) {
 	show := accounts.Command("show", "view details of an account").Action(cmd.show)
 	show.Arg("identifier", "identifier of server to show").Required().StringVar(&cmd.Id)
 }
-
