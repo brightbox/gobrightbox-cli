@@ -184,12 +184,120 @@ func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
 	return nil
 }
 
+func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Stopping server %s\n", id)
+		err := l.App.Client.StopServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Starting server %s\n", id)
+		err := l.App.Client.StartServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Rebooting server %s\n", id)
+		err := l.App.Client.RebootServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Resetting server %s\n", id)
+		err := l.App.Client.ResetServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Shutting down server %s\n", id)
+		err := l.App.Client.ShutdownServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Locking server %s\n", id)
+		err := l.App.Client.LockServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	for _, id := range l.IdList {
+		fmt.Printf("Unlocking server %s\n", id)
+		err := l.App.Client.UnlockServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+		}
+	}
+	return nil
+}
+
+
 func ConfigureServersCommand(app *CliApp) {
 	cmd := ServersCommand{App: app}
 	servers := app.Command("servers", "Manage cloud servers")
 	servers.Command("list", "List cloud servers").Action(cmd.list)
+	
 	show := servers.Command("show", "View details on a cloud server").Action(cmd.show)
 	show.Arg("identifier", "Identifier of server to show").Required().StringVar(&cmd.Id)
+	
 	create := servers.Command("create", "Create a new cloud server").Action(cmd.create)
 	create.Arg("image identifier", "Identifier of image with which to create the server").Required().StringVar(&cmd.ImageId)
 	create.Flag("name", "Name to give the new server").Short('n').StringVar(&cmd.Name)
@@ -199,6 +307,29 @@ func ConfigureServersCommand(app *CliApp) {
 	create.Flag("user-data", "Specify the user data as a string").PlaceHolder("USERDATA").StringVar(&cmd.UserData)
 	create.Flag("user-data-file", "Specify the user data from local file").PlaceHolder("FILENAME").OpenFileVar(&cmd.UserDataFile, 0, 0)
 	create.Flag("base64", "Base64 encode the user data (default: true)").Default("true").BoolVar(&cmd.Base64)
+	
 	destroy := servers.Command("destroy", "Destroy a cloud server").Action(cmd.destroy)
 	destroy.Arg("identifier", "Identifier of server to destroy").Required().StringsVar(&cmd.IdList)
+	
+	stop := servers.Command("stop", "Stop a cloud server").Action(cmd.stop)
+	stop.Arg("identifier", "Identifier of servers to stop").Required().StringsVar(&cmd.IdList)
+	
+	start := servers.Command("start", "Start a cloud server").Action(cmd.start)
+	start.Arg("identifier", "Identifier of servers to start").Required().StringsVar(&cmd.IdList)
+	
+	reboot := servers.Command("reboot", "Reboot a cloud server").Action(cmd.reboot)
+	reboot.Arg("identifier", "Identifier of servers to reboot").Required().StringsVar(&cmd.IdList)
+
+	reset := servers.Command("reset", "Reset a cloud server").Action(cmd.reset)
+	reset.Arg("identifier", "Identifier of servers to reset").Required().StringsVar(&cmd.IdList)
+
+	shutdown := servers.Command("shutdown", "Shutdown a cloud server").Action(cmd.shutdown)
+	shutdown.Arg("identifier", "Identifier of servers to shut down").Required().StringsVar(&cmd.IdList)
+
+	lock := servers.Command("lock", "Lock a cloud server").Action(cmd.lock)
+	lock.Arg("identifier", "Identifier of servers to lock").Required().StringsVar(&cmd.IdList)
+
+	unlock := servers.Command("unlock", "Unlock a cloud server").Action(cmd.unlock)
+	unlock.Arg("identifier", "Identifier of servers to unlock").Required().StringsVar(&cmd.IdList)
+
 }
