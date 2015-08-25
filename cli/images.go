@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"github.com/brightbox/gobrightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sort"
@@ -155,6 +156,26 @@ func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
+func (l *ImagesCommand) destroy(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	returnError := false
+	for _, id := range l.IdList {
+		fmt.Printf("Destroying image %s\n", id)
+		err := l.App.Client.DestroyImage(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+			returnError = true
+		}
+	}
+	if returnError {
+		return genericError
+	}
+	return nil
+}
+
 func ConfigureImagesCommand(app *CliApp) {
 	cmd := ImagesCommand{App: app}
 	images := app.Command("images", "Manage server images")
@@ -162,4 +183,7 @@ func ConfigureImagesCommand(app *CliApp) {
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)
 	show := images.Command("show", "View details on a server image").Action(cmd.show)
 	show.Arg("identifier", "Identifier of image to show").Required().StringVar(&cmd.Id)
+	destroy := images.Command("destroy", "Destroy a server image").Action(cmd.destroy)
+	destroy.Arg("identifier", "Identifier of image to destroy").Required().StringsVar(&cmd.IdList)
+
 }
