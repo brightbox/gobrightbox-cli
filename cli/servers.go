@@ -2,17 +2,12 @@ package cli
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"github.com/brightbox/gobrightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
 	"strings"
-)
-
-var (
-	genericError = errors.New("Errors were encountered")
 )
 
 type ServersCommand struct {
@@ -179,16 +174,19 @@ func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Destroying server %s\n", id)
 		err := l.App.Client.DestroyServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
@@ -196,16 +194,19 @@ func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Stopping server %s\n", id)
 		err := l.App.Client.StopServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
@@ -213,16 +214,19 @@ func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Starting server %s\n", id)
 		err := l.App.Client.StartServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
@@ -230,16 +234,19 @@ func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Rebooting server %s\n", id)
 		err := l.App.Client.RebootServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
@@ -247,16 +254,19 @@ func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Resetting server %s\n", id)
 		err := l.App.Client.ResetServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
@@ -264,16 +274,19 @@ func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Shutting down server %s\n", id)
 		err := l.App.Client.ShutdownServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
@@ -281,16 +294,19 @@ func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Locking server %s\n", id)
 		err := l.App.Client.LockServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
@@ -298,16 +314,19 @@ func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Unlocking server %s\n", id)
 		err := l.App.Client.UnlockServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 		}
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
@@ -315,18 +334,21 @@ func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	var returnError *error
+	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Snapshotting server %s\n", id)
 		img, err := l.App.Client.SnapshotServer(id)
 		if err != nil {
 			l.App.Errorf("%s: %s", err.Error(), id)
-			returnError = &genericError
+			returnError = true
 			continue
 		}
 		fmt.Printf("Snapsnot image %s started from server %s\n", img.Id, id)
 	}
-	return *returnError
+	if returnError {
+		return genericError
+	}
+	return nil
 }
 
 func ConfigureServersCommand(app *CliApp) {

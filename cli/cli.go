@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"errors"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"strings"
+)
+
+var (
+	genericError = errors.New("Errors were encountered")
 )
 
 type CliApp struct {
