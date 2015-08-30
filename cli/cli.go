@@ -31,6 +31,7 @@ func New() *CliApp {
 	ConfigureTokenCommand(a)
 	ConfigureImagesCommand(a)
 	ConfigureCloudIPsCommand(a)
+	ConfigureEventsCommand(a)
 	return a
 }
 
