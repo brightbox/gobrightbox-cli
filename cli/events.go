@@ -2,11 +2,12 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
-	"golang.org/x/net/websocket"
+	"fmt"
+	"github.com/gorilla/websocket"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io"
 	"log"
+	"strings"
 )
 
 type EventsCommand struct {
@@ -15,54 +16,71 @@ type EventsCommand struct {
 	Format string
 }
 
-// __jsonp1__([{"id":"1","channel":"/meta/handshake","successful":true,"version":"1.0","supportedConnectionTypes":["long-polling","cross-origin-long-polling","callback-polling","websocket","eventsource","in-process"],"clientId":"jn6854gieb65ld2i0nkwz3yf2rtczwl","advice":{"reconnect":"retry","interval":0,"timeout":25000}}]);
-
+type FayeAdvice struct {
+	Timeout int
+}
 type FayeAuth struct {
 	AuthToken string `json:"auth_token"`
 }
 type FayeMsg struct {
-	Channel                  string    `json:"channel"`
-	ClientId                 string    `json:"clientId,omitempty"`
-	ConnectionType           string    `json:"connectionType,omitempty"`
-	Id                       string    `json:"id,omitempty"`
-	Subscription             string    `json:"subscription,omitempty"`
-	Ext                      *FayeAuth `json:"ext,omitempty"`
-	Version                  string    `json:"version,omitempty"`
-	SupportedConnectionTypes []string  `json:"supportedConnectionTypes,omitempty"`
-	Successful               bool      `json:"successful,omitempty"`
-	Error                    string    `json:"error,omitempty"`
-	Data                     string    `json:"data,omitempty"`
+	Channel                  string           `json:"channel,omitempty"`
+	ClientId                 string           `json:"clientId,omitempty"`
+	ConnectionType           string           `json:"connectionType,omitempty"`
+	Id                       string           `json:"id,omitempty"`
+	Subscription             string           `json:"subscription,omitempty"`
+	Ext                      *FayeAuth        `json:"ext,omitempty"`
+	Version                  string           `json:"version,omitempty"`
+	SupportedConnectionTypes []string         `json:"supportedConnectionTypes,omitempty"`
+	Successful               bool             `json:"successful,omitempty"`
+	Error                    string           `json:"error,omitempty"`
+	Data                     *json.RawMessage `json:"data,omitempty"`
+	Advice                   *FayeAdvice      `json:"advice,omitempty"`
 }
 
-func sendmsg(ws *websocket.Conn, msgs ...FayeMsg) error {
+type EventResource struct {
+	Id    string
+	Name  string
+	Email *string
+}
+type Event struct {
+	Id       string
+	Action   *string
+	State    *string
+	Resource *EventResource
+	Account  *EventResource
+	Affects  *[]EventResource
+	Touches  *[]EventResource
+	User     *EventResource
+}
+
+func sendmsg(ws *websocket.Conn, msgs ...*FayeMsg) error {
 	jmsg, err := json.Marshal(msgs)
 	if err != nil {
 		return err
 	}
-	if _, err := ws.Write(jmsg); err != nil {
+	if err = ws.WriteMessage(websocket.TextMessage, jmsg); err != nil {
 		return err
 	}
 	return nil
 }
 func recvmsg(ws *websocket.Conn) ([]FayeMsg, error) {
-	var jmsg = make([]byte, 4096)
-	var n int
-	n, err := ws.Read(jmsg)
+	_, jmsg, err := ws.ReadMessage()
+	//log.Println(string(jmsg))
 	if err != nil {
 		return nil, err
 	}
 	msgl := make([]FayeMsg, 1)
-	err = json.Unmarshal(jmsg[0:n], &msgl)
+	err = json.Unmarshal(jmsg, &msgl)
 	if err != nil {
 		return nil, err
 	}
-	if msgl[0].Successful == false {
+	/*	if msgl[0].Successful == false {
 		return nil, errors.New(msgl[0].Error)
-	}
+	} */
 	return msgl, nil
 }
 
-func (l *TokenCommand) watch(pc *kingpin.ParseContext) error {
+func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 	err := l.App.Configure()
 	if err != nil {
 		return err
@@ -81,15 +99,13 @@ func (l *TokenCommand) watch(pc *kingpin.ParseContext) error {
 		SupportedConnectionTypes: []string{"long-polling", "websocket"},
 	}
 
-	origin := "https://events.gb1s.brightbox.com"
 	url := "wss://events.gb1s.brightbox.com/stream"
-
-	ws, err := websocket.Dial(url, "", origin)
+	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err
 	}
-	log.Println("Handshake...")
-	err = sendmsg(ws, handshake)
+	defer ws.Close()
+	err = sendmsg(ws, &handshake)
 	if err != nil {
 		return err
 	}
@@ -98,52 +114,32 @@ func (l *TokenCommand) watch(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	log.Println(msgl[0].SupportedConnectionTypes)
-	cid := msgl[0].ClientId
-	log.Println("Hands shook, got Client Id " + cid)
+	msg := msgl[0]
+	cid := msg.ClientId
+	/*timeout := 20000
+	if msg.Advice != nil {
+		timeout = msg.Advice.Timeout
+	}*/
+
+	err = sendmsg(ws, nil)
 
 	connect := FayeMsg{
 		Channel:        "/meta/connect",
 		ClientId:       cid,
 		ConnectionType: "websocket",
-		Ext: &FayeAuth{
-			AuthToken: token.AccessToken,
-		},
-
 	}
-
-	log.Println("Connecting...")
-	err = sendmsg(ws, connect)
-	if err != nil {
-		return err
-	}
-	msgl, err = recvmsg(ws)
-	if err != nil {
-		return err
-	}
-	log.Println("Subscribing...")
 	subscribe := FayeMsg{
 		Channel:      "/meta/subscribe",
 		ClientId:     cid,
 		Subscription: "/account/" + l.App.accountId(),
-		Ext: &FayeAuth{
-			AuthToken: token.AccessToken,
-		},
+		Ext:          &FayeAuth{AuthToken: token.AccessToken},
 	}
-	err = sendmsg(ws, subscribe)
+	err = sendmsg(ws, &connect, &subscribe)
 	if err != nil {
 		return err
 	}
-	msgl, err = recvmsg(ws)
-	if err != nil {
-		return err
-	}
-	log.Println("Subscribed")
-
-	var jmsg = make([]byte, 4096)
-	var n int
 	for {
-		n, err = ws.Read(jmsg)
+		msgl, err := recvmsg(ws)
 		if err == io.EOF {
 			log.Println("EOF Disconnected")
 			return nil
@@ -151,12 +147,40 @@ func (l *TokenCommand) watch(pc *kingpin.ParseContext) error {
 		if err != nil {
 			return err
 		}
-		log.Println(string(jmsg[0:n]))
+		for _, msg := range msgl {
+			if msg.Data != nil && strings.HasPrefix(msg.Channel, "/account/acc") {
+				e := Event{}
+				err = json.Unmarshal(*msg.Data, &e)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				if e.Resource != nil && e.User != nil {
+					log.Printf("%s %s %s\n", *e.User.Email, *e.Action, e.Resource.Id)
+				} else if e.Resource != nil {
+					log.Printf("%s %s %s\n", e.Resource.Id, *e.State, *e.Action)
+				} else {
+					log.Println(string(*msg.Data))
+				}
+			}
+			if msg.Channel == "/meta/connect" {
+				if msg.Successful {
+					err = sendmsg(ws, &connect)
+					if err != nil {
+						log.Println("Connect error: ", err.Error())
+					}
+				} else {
+					return fmt.Errorf("Event connection failure: " + msg.Error)
+				}
+			} else if msg.Channel == "/meta/subscribe" && !msg.Successful {
+				return fmt.Errorf("Event subscription failure: " + msg.Error)
+			}
+		}
 	}
 }
 
 func ConfigureEventsCommand(app *CliApp) {
-	cmd := TokenCommand{App: app}
+	cmd := EventsCommand{App: app}
 	events := app.Command("events", "view event stream")
 	events.Command("watch", "listen for events and output them").Action(cmd.watch)
 }
