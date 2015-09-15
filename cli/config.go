@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"path"
 	"sort"
+	"strings"
 )
 
 // Represents a Client section from the config
@@ -46,6 +47,17 @@ func (c *Client) findAuthUrl() string {
 		return ""
 	}
 	return u.String()
+}
+
+func (c *Client) findRegionDomain() string {
+	u, err := url.Parse(c.ApiUrl)
+	if err != nil {
+		return ""
+	}
+	if strings.HasPrefix(u.Host, "api.") {
+		return strings.TrimPrefix(u.Host, "api.")
+	}
+	return ""
 }
 
 func (c *Client) Token() (*oauth2.Token, error) {

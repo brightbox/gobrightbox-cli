@@ -44,13 +44,14 @@ type EventResource struct {
 }
 type Event struct {
 	Id       string
-	Action   *string
-	State    *string
-	Resource *EventResource
-	Account  *EventResource
-	Affects  *[]EventResource
-	Touches  *[]EventResource
-	User     *EventResource
+	Action   string
+	State    string
+	Resource EventResource
+	Account  EventResource
+	Affects  []EventResource
+	Touches  []EventResource
+	User     EventResource
+	Client   EventResource
 }
 
 func sendmsg(ws *websocket.Conn, msgs ...*FayeMsg) error {
@@ -65,7 +66,6 @@ func sendmsg(ws *websocket.Conn, msgs ...*FayeMsg) error {
 }
 func recvmsg(ws *websocket.Conn) ([]FayeMsg, error) {
 	_, jmsg, err := ws.ReadMessage()
-	//log.Println(string(jmsg))
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +74,6 @@ func recvmsg(ws *websocket.Conn) ([]FayeMsg, error) {
 	if err != nil {
 		return nil, err
 	}
-	/*	if msgl[0].Successful == false {
-		return nil, errors.New(msgl[0].Error)
-	} */
 	return msgl, nil
 }
 
@@ -89,8 +86,8 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 	defer w.Flush()
 
 	token, err := l.App.Client.Token()
-	if token == nil {
-		l.App.Fatalf("No cached OAuth token found for %s", l.App.ClientName)
+	if err != nil {
+		return err
 	}
 
 	handshake := FayeMsg{
@@ -99,7 +96,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 		SupportedConnectionTypes: []string{"long-polling", "websocket"},
 	}
 
-	url := "wss://events.gb1s.brightbox.com/stream"
+	url := "wss://events." + l.App.Client.findRegionDomain() + "/stream"
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err
@@ -116,10 +113,6 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 	}
 	msg := msgl[0]
 	cid := msg.ClientId
-	/*timeout := 20000
-	if msg.Advice != nil {
-		timeout = msg.Advice.Timeout
-	}*/
 
 	err = sendmsg(ws, nil)
 
@@ -155,13 +148,29 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 					log.Println(err)
 					continue
 				}
-				if e.Resource != nil && e.User != nil {
-					log.Printf("%s %s %s\n", *e.User.Email, *e.Action, e.Resource.Id)
-				} else if e.Resource != nil {
-					log.Printf("%s %s %s\n", e.Resource.Id, *e.State, *e.Action)
-				} else {
-					log.Println(string(*msg.Data))
+				//log.Println(string(*msg.Data))
+				var s string
+				if e.User.Email != nil {
+					s = fmt.Sprintf("<%s>", *e.User.Email)
 				}
+				if e.Client.Id != "" {
+					s += fmt.Sprintf(" client:%s", e.Client.Id)
+				}
+				if e.Action != "" {
+					s += fmt.Sprintf(" action:%s", e.Action)
+				}
+				if e.Resource.Id != "" {
+					s += fmt.Sprintf(" resource:%s", e.Resource.Id)
+				} else {
+					s += fmt.Sprintf(" event:%s", string(*msg.Data))
+				}
+				if len(e.Affects) > 0 && (len(e.Affects) > 1 || e.Affects[0].Id != e.Resource.Id) {
+					s += fmt.Sprintf(" affects:%s", collectById(e.Affects))
+				}
+				if len(e.Touches) > 0 && (len(e.Touches) > 1 || e.Touches[0].Id != e.Resource.Id) {
+					s += fmt.Sprintf(" touches:%s", collectById(e.Touches))
+				}
+				log.Println(s)
 			}
 			if msg.Channel == "/meta/connect" {
 				if msg.Successful {
