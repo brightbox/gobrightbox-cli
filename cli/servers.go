@@ -365,7 +365,7 @@ func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
 			returnError = true
 			continue
 		}
-		fmt.Printf("Console activated for server %s: %s\n", id, srv.ConsoleUrl + "?password=" + srv.ConsoleToken)
+		fmt.Printf("Console activated for server %s: %s\n", id, srv.FullConsoleUrl())
 	}
 	if returnError {
 		return genericError
