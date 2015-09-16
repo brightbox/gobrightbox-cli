@@ -351,6 +351,29 @@ func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
 	return nil
 }
 
+func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	returnError := false
+	for _, id := range l.IdList {
+		fmt.Printf("Activating console for server %s\n", id)
+		srv, err := l.App.Client.ActivateConsoleForServer(id)
+		if err != nil {
+			l.App.Errorf("%s: %s", err.Error(), id)
+			returnError = true
+			continue
+		}
+		fmt.Printf("Console activated for server %s: %s\n", id, srv.ConsoleUrl + "?password=" + srv.ConsoleToken)
+	}
+	if returnError {
+		return genericError
+	}
+	return nil
+}
+
+
 func ConfigureServersCommand(app *CliApp) {
 	cmd := ServersCommand{App: app}
 	servers := app.Command("servers", "Manage cloud servers")
@@ -395,5 +418,8 @@ func ConfigureServersCommand(app *CliApp) {
 
 	snap := servers.Command("snapshot", "Snapshot a cloud server").Action(cmd.snapshot)
 	snap.Arg("identifier", "Identifier of servers to snapshot").Required().StringsVar(&cmd.IdList)
+
+	console := servers.Command("activate_console", "Activate the graphical console for a cloud server").Action(cmd.activateConsole)
+	console.Arg("identifier", "Identifier of servers to snapshot").Required().StringsVar(&cmd.IdList)
 
 }
