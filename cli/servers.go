@@ -34,12 +34,29 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 
 	w := tabWriter()
 	defer w.Flush()
+	var groupFilter []string
+	if l.Groups != nil {
+		groupFilter = strings.Split(*l.Groups, ",")
+	}
 	servers, err := l.App.Client.Servers()
 	if err != nil {
 		return err
 	}
 	listRec(w, "ID", "STATUS", "TYPE", "ZONE", "CREATED", "IMAGE", "CLOUDIPS", "NAME")
 	for _, s := range *servers {
+		if len(groupFilter) > 0 {
+			matches := 0
+			for _, gf := range groupFilter {
+				for _, g := range s.ServerGroups {
+					if g.Id == gf {
+						matches += 1
+					}
+				}
+			}
+			if matches == 0 {
+				continue
+			}
+		}
 		listRec(
 			w, s.Id, s.Status, s.ServerType.Handle,
 			s.Zone.Handle, s.CreatedAt.Format("2006-01-02"),
@@ -59,7 +76,7 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 	if err != nil {
 		l.App.Fatalf(err.Error())
 	}
-	
+
 	drawShow(w, []interface{}{
 		"id", s.Id,
 		"status", s.Status,
@@ -100,7 +117,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 	}
 	newServer := brightbox.ServerOptions{
 		Image: l.ImageId,
-		Name: l.Name,
+		Name:  l.Name,
 	}
 
 	if l.Zone != "" {
@@ -189,7 +206,7 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 	}
 
 	updateServer.CompatibilityMode = l.CompatibilityMode
-	
+
 	var userData []byte
 	if l.UserData != nil {
 		userData = []byte(*l.UserData)
@@ -482,7 +499,10 @@ func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
 func ConfigureServersCommand(app *CliApp) {
 	cmd := ServersCommand{App: app}
 	servers := app.Command("servers", "Manage cloud servers")
-	servers.Command("list", "List cloud servers").Action(cmd.list)
+	list := servers.Command("list", "List cloud servers").
+		Default().Action(cmd.list)
+	list.Flag("groups", "List only servers belonging to these groups").
+		Short('g').SetValue(&pStringValue{&cmd.Groups})
 
 	show := servers.Command("show", "View details on a cloud server").
 		Action(cmd.show)
