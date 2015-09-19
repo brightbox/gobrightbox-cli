@@ -59,14 +59,14 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 	if err != nil {
 		l.App.Fatalf(err.Error())
 	}
-
+	
 	drawShow(w, []interface{}{
 		"id", s.Id,
 		"status", s.Status,
 		"locked", s.Locked,
 		"name", s.Name,
-		"created_at", s.CreatedAt,
-		"deleted_at", s.DeletedAt,
+		"created_at", formatTime(s.CreatedAt),
+		"deleted_at", formatTime(s.DeletedAt),
 		"zone", s.Zone.Handle,
 		"type", s.ServerType.Id,
 		"type_name", s.ServerType.Name,

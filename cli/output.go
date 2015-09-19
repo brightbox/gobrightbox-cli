@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"text/tabwriter"
+	"time"
 )
 
 func tabWriter() *tabwriter.Writer {
@@ -43,6 +44,13 @@ func PrettyPrintJson(body []byte) *bytes.Buffer {
 	return &out
 }
 
+func formatTime(t *time.Time) string {
+	if t != nil {
+		return t.String()
+	} else {
+		return ""
+	}
+}
 func collectById(resources interface{}) string {
 	return collectByField(resources, "Id")
 }
