@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"github.com/brightbox/gobrightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"strings"
 )
 
 type ServerGroupsCommand struct {
 	App         *CliApp
 	Id          string
+	Dst         string
 	IdList      []string
 	Name        *string
 	Description *string
@@ -121,6 +123,45 @@ func (l *ServerGroupsCommand) destroy(pc *kingpin.ParseContext) error {
 	return nil
 }
 
+func (l *ServerGroupsCommand) add(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Adding servers %s to server group %s\n", strings.Join(l.IdList, ", "), l.Id)
+	_, err = l.App.Client.AddServersToServerGroup(l.Id, l.IdList)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *ServerGroupsCommand) remove(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Removing servers %s to server group %s\n", strings.Join(l.IdList, ", "), l.Id)
+	_, err = l.App.Client.RemoveServersFromServerGroup(l.Id, l.IdList)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *ServerGroupsCommand) move(pc *kingpin.ParseContext) error {
+	err := l.App.Configure()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Moving servers %s from server group %s to server group %s\n", strings.Join(l.IdList, ", "), l.Dst, l.Id)
+	_, err = l.App.Client.MoveServersToServerGroup(l.Id, l.Dst, l.IdList)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func ConfigureServerGroupsCommand(app *CliApp) {
 	cmd := ServerGroupsCommand{App: app}
 	groups := app.Command("groups", "manage server groups")
@@ -151,6 +192,29 @@ func ConfigureServerGroupsCommand(app *CliApp) {
 	destroy := groups.Command("destroy", "Destroy a server group").
 		Action(cmd.destroy)
 	destroy.Arg("identifier", "Identifier of server groupto destroy").
+		Required().StringsVar(&cmd.IdList)
+
+	add := groups.Command("add_servers", "Add servers to a server group").
+		Action(cmd.add)
+	add.Arg("group_identifier", "Identifier of group to add the servers to").
+		Required().StringVar(&cmd.Id)
+	add.Arg("server_identifiers", "Identifiers of servers to add to the group").
+		Required().StringsVar(&cmd.IdList)
+
+	rem := groups.Command("remove_servers", "Remove servers from a server group").
+		Action(cmd.remove)
+	rem.Arg("group_identifier", "Identifier of group to remove the servers from").
+		Required().StringVar(&cmd.Id)
+	rem.Arg("server_identifiers", "Identifiers of servers to remove from the group").
+		Required().StringsVar(&cmd.IdList)
+
+	mv := groups.Command("move_servers", "Move servers between server groups").
+		Action(cmd.move)
+	mv.Arg("src_group_identifier", "Identifier of group to move the servers from").
+		Required().StringVar(&cmd.Id)
+	mv.Arg("dst_group_identifier", "Identifier of group to move the servers to").
+		Required().StringVar(&cmd.Dst)
+	mv.Arg("server_identifiers", "Identifiers of servers to move").
 		Required().StringsVar(&cmd.IdList)
 
 }
