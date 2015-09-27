@@ -194,7 +194,7 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	updateServer := brightbox.ServerOptions{Identifier: l.Id}
+	updateServer := brightbox.ServerOptions{Id: l.Id}
 
 	updateServer.Name = l.Name
 
@@ -244,7 +244,7 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 	for _, id := range l.IdList {
 
 		fmt.Printf("Updating server %s\n", id)
-		updateServer.Identifier = id
+		updateServer.Id = id
 		server, err := l.App.Client.UpdateServer(&updateServer)
 		if err != nil {
 			if len(l.IdList) == 1 {

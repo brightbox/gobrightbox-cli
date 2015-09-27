@@ -87,7 +87,7 @@ func (l *ServerGroupsCommand) update(pc *kingpin.ParseContext) error {
 		return err
 	}
 	updateGroup := brightbox.ServerGroupOptions{
-		Identifier:  l.Id,
+		Id:          l.Id,
 		Name:        l.Name,
 		Description: l.Description,
 	}
