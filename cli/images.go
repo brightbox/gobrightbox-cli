@@ -179,9 +179,9 @@ func (l *ImagesCommand) destroy(pc *kingpin.ParseContext) error {
 func ConfigureImagesCommand(app *CliApp) {
 	cmd := ImagesCommand{App: app}
 	images := app.Command("images", "Manage server images")
-	list := images.Command("list", "List server images").Action(cmd.list)
+	list := images.Command("list", "List server images").Default().Action(cmd.list)
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)
-	show := images.Command("show", "View details on a server image").Action(cmd.show)
+	show := images.Command("show", "View details of a server image").Action(cmd.show)
 	show.Arg("identifier", "Identifier of image to show").Required().StringVar(&cmd.Id)
 	destroy := images.Command("destroy", "Destroy a server image").Action(cmd.destroy)
 	destroy.Arg("identifier", "Identifier of image to destroy").Required().StringsVar(&cmd.IdList)

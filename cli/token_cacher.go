@@ -14,7 +14,7 @@ type TokenCacher struct {
 }
 
 func (tc *TokenCacher) Read() *oauth2.Token {
-	if tc.token != nil && tc.token.Valid() == true {
+	if tc.token != nil {
 		return tc.token
 	}
 	filename := tc.jsonFilename()
@@ -28,10 +28,6 @@ func (tc *TokenCacher) Read() *oauth2.Token {
 	var token oauth2.Token
 	err = json.Unmarshal(token_json, &token)
 	if err != nil {
-		return nil
-	}
-	if token.Valid() == false {
-		tc.Clear()
 		return nil
 	}
 	tc.token = &token

@@ -85,7 +85,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 	w := tabWriterRight()
 	defer w.Flush()
 
-	token, err := l.App.Client.Token()
+	token, err := l.App.Client.TokenSource().Token()
 	if err != nil {
 		return err
 	}

@@ -22,10 +22,9 @@ func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
 	defer w.Flush()
 
 	if l.Force {
-		tc := TokenCacher{Key: l.App.ClientName}
-		tc.Clear()
+		l.App.Client.TokenCache().Clear()
 	}
-	token, err := l.App.Client.Token()
+	token, err := l.App.Client.TokenSource().Token()
 	if token == nil {
 		l.App.Fatalf("No cached OAuth token found for %s", l.App.ClientName)
 	}
@@ -53,10 +52,8 @@ func (l *TokenCommand) clear(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	tc := TokenCacher{Key: l.App.ClientName}
-	tc.Clear()
+	l.App.Client.TokenCache().Clear()
 	return nil
-
 }
 
 func ConfigureTokenCommand(app *CliApp) {

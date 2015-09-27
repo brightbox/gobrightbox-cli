@@ -32,11 +32,12 @@ func New() *CliApp {
 	ConfigureImagesCommand(a)
 	ConfigureCloudIPsCommand(a)
 	ConfigureEventsCommand(a)
+	ConfigureLoginCommand(a)
 	return a
 }
 
 func (c *CliApp) Configure() error {
-	cfg, err := NewConfigAndConfigure(c.ClientName, &c.AccountId)
+	cfg, err := NewConfigAndConfigure(c.ClientName, c.AccountId)
 
 	if err != nil {
 		return err
