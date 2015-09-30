@@ -2,50 +2,132 @@ package cli
 
 import (
 	"fmt"
+	"github.com/brightbox/gobrightbox"
+	"github.com/howeyc/gopass"
 	"golang.org/x/oauth2"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type LoginCommand struct {
-	App   *CliApp
-	Email string
+	*CliApp
+	Email          string
+	ApiUrl         string
+	AuthUrl        string
+	ClientId       string
+	Secret         string
+	DefaultAccount string
 }
 
 func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
-	if l.App.ClientName == "" {
-		err = l.App.Config.SetClient(l.Email)
+	var client *Client
+	if l.ClientName == "" {
+		client, err = l.Config.Client(l.Email)
 		if err != nil {
-			return err
+			client = new(Client)
+		}
+	} else {
+		client, err = l.Config.Client(l.Email)
+		if err != nil {
+			l.Fatalf("Couldn't find client config %s: %s", l.Email, err)
 		}
 	}
-	w := tabWriterRight()
-	defer w.Flush()
+	if l.Email != "" {
+		client.ClientName = l.Email
+	}
+	if l.ClientId != "" {
+		client.ClientID = l.ClientId
+	}
+	if l.Secret != "" {
+		client.Secret = l.Secret
+	}
+	if l.ApiUrl != "" {
+		client.ApiUrl = l.ApiUrl
+	}
+	if l.AuthUrl != "" {
+		client.AuthUrl = l.AuthUrl
+	}
+	if client.AuthUrl == "" && l.ApiUrl != "" {
+		client.ApiUrl = l.ApiUrl
+	}
+	if l.Email != "" {
+		client.Username = l.Email
+	}
+	if l.DefaultAccount != "" {
+		client.DefaultAccount = l.DefaultAccount
+	}
 
-	oc := l.App.Client.oauthConfig()
+	oc := client.oauthConfig()
 	var token *oauth2.Token
 	switch oc := oc.(type) {
 	case oauth2.Config:
-		var password string
-		fmt.Printf("Password for %s: ", l.App.Client.Username)
-		fmt.Scanln(&password)
-		token, err = oc.PasswordCredentialsToken(oauth2.NoContext, l.App.Client.Username, password)
+		fmt.Printf("Password for %s: ", client.Username)
+		password := gopass.GetPasswd()
+		if string(password) == "" {
+			l.Fatalf("Password not provided.")
+		}
+		token, err = oc.PasswordCredentialsToken(oauth2.NoContext, client.Username, string(password))
 		if err != nil {
-			l.App.Fatalf("%s", err)
+			l.Fatalf("%s", err)
 		}
 	default:
-		l.App.Fatalf("Client config %s isn't for password authentication", l.App.Client.ClientName)
+		l.Fatalf("Client config %s isn't for password authentication", client.ClientName)
 	}
-	l.App.Client.TokenCache().Write(token)
+	client.TokenCache().Write(token)
+
+	// Choose a default account
+	if client.DefaultAccount == "" {
+		client.Setup("")
+		accounts, err := client.Accounts()
+		if err != nil {
+			l.Errorf("Couldn't choose a default account: %s", err)
+		}
+		if len(*accounts) == 0 {
+			l.Errorf("No accounts available to choose a default account")
+		}
+		var da *brightbox.Account
+		for _, a := range *accounts {
+			if da == nil {
+				da = &a
+				continue
+			}
+			if a.RamUsed > da.RamUsed {
+				da = &a
+			}
+		}
+		if da != nil {
+			fmt.Printf("Selected account \"%s\" (%s) as default account\n", da.Name, da.Id)
+			client.DefaultAccount = da.Id
+		}
+	}
+	err = l.Config.SaveClientConfig(client)
+	if err != nil {
+		l.Fatalf("Couldn't save client config %s: %s", client.ClientName, err)
+	}
+	if l.Config.defaultClientName == "" {
+		l.Config.defaultClientName = client.ClientName
+		l.Config.WriteGlobal()
+	}
 	return nil
 }
 
 func ConfigureLoginCommand(app *CliApp) {
-	cmd := LoginCommand{App: app}
+	cmd := LoginCommand{CliApp: app}
 	login := app.Command("login", "Authenticate with user credentials").Action(cmd.login)
 	login.Arg("email address", "Your user's email address").
 		Required().StringVar(&cmd.Email)
+	login.Flag("api-url", "url of Brightbox API").
+		Default("https://api.gb1.brightbox.com").StringVar(&cmd.ApiUrl)
+	login.Flag("auth-url", "url of Brightbox API authentication endpoint").
+		Default("https://api.gb1.brightbox.com").StringVar(&cmd.AuthUrl)
+	login.Flag("client-id", "OAuth client identifier to use").
+		Default("app-12345").StringVar(&cmd.ClientId)
+	login.Flag("secret", "OAuth client secret to use").
+		Default("mocbuipbiaa6k6c").StringVar(&cmd.Secret)
+	login.Flag("default-account", "Id of account to use by default with this client").
+		StringVar(&cmd.DefaultAccount)
+
 }

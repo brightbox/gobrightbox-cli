@@ -41,9 +41,14 @@ func (c *CliApp) Configure() error {
 	if err != nil {
 		return err
 	}
+	c.Config = cfg
+
 	clientName := c.ClientName
 	if clientName == "" {
 		clientName = cfg.defaultClientName
+	}
+	if clientName == "" {
+		return nil
 	}
 	err = cfg.SetClient(clientName)
 	if err != nil {
@@ -53,7 +58,6 @@ func (c *CliApp) Configure() error {
 	if err != nil {
 		return err
 	}
-	c.Config = cfg
 	c.Client = cfg.CurrentClient()
 	return nil
 }
