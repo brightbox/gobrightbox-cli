@@ -10,14 +10,14 @@ import (
 // Represents a Client section from the config
 // Can also be used as a TokenSource for oauth2 transport
 type Client struct {
-	*brightbox.Client
-	ClientName     string
-	ClientID       string `ini:"client_id"`
-	Secret         string `ini:"secret"`
-	ApiUrl         string `ini:"api_url"`
-	DefaultAccount string `ini:"default_account"`
-	AuthUrl        string `ini:"auth_url"`
-	Username       string `ini:"username"`
+	*brightbox.Client `json:"-"`
+	ClientName     string `json:"-"`
+	ClientID       string `json:"client_id,omitempty"`
+	Secret         string `json:"secret,omitempty"`
+	ApiUrl         string `json:"api_url,omitempty"`
+	DefaultAccount string `json:"default_account,omitempty"`
+	AuthUrl        string `json:"auth_url,omitempty"`
+	Username       string `json:"username,omitempty"`
 	tokenCache     *TokenCacher
 	tokenSource    oauth2.TokenSource
 }
@@ -28,6 +28,20 @@ func (c *Client) TokenCache() *TokenCacher {
 	}
 	return c.tokenCache
 }
+
+func (c *Client) Setup(accountId string) error {
+	tc := oauth2.NewClient(oauth2.NoContext, c.TokenSource())
+	if accountId == "" {
+		accountId = c.DefaultAccount
+	}
+	client, err := brightbox.NewClient(c.ApiUrl, accountId, tc)
+	if err != nil {
+		return err
+	}
+	c.Client = client
+	return nil
+}
+
 
 func (c *Client) findAuthUrl() string {
 	var err error

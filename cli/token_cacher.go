@@ -5,7 +5,6 @@ import (
 	"golang.org/x/oauth2"
 	"io/ioutil"
 	"os"
-	"path"
 )
 
 type TokenCacher struct {
@@ -35,11 +34,7 @@ func (tc *TokenCacher) Read() *oauth2.Token {
 }
 
 func (tc *TokenCacher) jsonFilename() *string {
-	dir := configDirectory()
-	if dir == nil {
-		return nil
-	}
-	filename := path.Join(*dir, tc.Key+".oauth_token.json")
+	filename := xdgapp.CachePath(tc.Key+".oauth_token.json")
 	return &filename
 }
 

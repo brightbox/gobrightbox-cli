@@ -37,13 +37,24 @@ func New() *CliApp {
 }
 
 func (c *CliApp) Configure() error {
-	cfg, err := NewConfigAndConfigure(c.ClientName, c.AccountId)
-
+	cfg, err := NewConfig()
+	if err != nil {
+		return err
+	}
+	clientName := c.ClientName
+	if clientName == "" {
+		clientName = cfg.defaultClientName
+	}
+	err = cfg.SetClient(clientName)
+	if err != nil {
+		return err
+	}
+	err = cfg.CurrentClient().Setup(c.AccountId)
 	if err != nil {
 		return err
 	}
 	c.Config = cfg
-	c.Client = cfg.Client
+	c.Client = cfg.CurrentClient()
 	return nil
 }
 
