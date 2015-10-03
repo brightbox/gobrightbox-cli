@@ -6,6 +6,7 @@ import (
 	"github.com/howeyc/gopass"
 	"golang.org/x/oauth2"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"strings"
 )
 
 type LoginCommand struct {
@@ -23,21 +24,26 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
+
+	clientName := l.Email
+	email := l.Email
+	if strings.Contains(email, "/") {
+		toks := strings.SplitN(email, "/", 2)
+		email = toks[0]
+	}
 	var client *Client
 	if l.ClientName == "" {
-		client, err = l.Config.Client(l.Email)
+		client, err = l.Config.Client(clientName)
 		if err != nil {
 			client = new(Client)
 		}
 	} else {
-		client, err = l.Config.Client(l.Email)
+		client, err = l.Config.Client(clientName)
 		if err != nil {
-			l.Fatalf("Couldn't find client config %s: %s", l.Email, err)
+			l.Fatalf("Couldn't find client config %s: %s", clientName, err)
 		}
 	}
-	if l.Email != "" {
-		client.ClientName = l.Email
-	}
+	client.ClientName = clientName
 	if l.ClientId != "" {
 		client.ClientID = l.ClientId
 	}
@@ -54,7 +60,7 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 		client.ApiUrl = l.ApiUrl
 	}
 	if l.Email != "" {
-		client.Username = l.Email
+		client.Username = email
 	}
 	if l.DefaultAccount != "" {
 		client.DefaultAccount = l.DefaultAccount
@@ -88,17 +94,19 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 		if len(*accounts) == 0 {
 			l.Errorf("No accounts available to choose a default account")
 		}
-		var da *brightbox.Account
+		var da brightbox.Account
 		for _, a := range *accounts {
-			if da == nil {
-				da = &a
-				continue
-			}
-			if a.RamUsed > da.RamUsed {
-				da = &a
+			if a.Status == "active" {
+				if da.Id == "" {
+					da = a
+					continue
+				}
+				if a.RamUsed > da.RamUsed {
+					da = a
+				}
 			}
 		}
-		if da != nil {
+		if da.Id != "" {
 			fmt.Printf("Selected account \"%s\" (%s) as default account\n", da.Name, da.Id)
 			client.DefaultAccount = da.Id
 		}
@@ -107,9 +115,9 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 	if err != nil {
 		l.Fatalf("Couldn't save client config %s: %s", client.ClientName, err)
 	}
-	if l.Config.defaultClientName == "" {
+	if l.Config.DefaultClient() == nil {
 		l.Config.defaultClientName = client.ClientName
-		l.Config.WriteGlobal()
+		l.Config.Write()
 	}
 	return nil
 }
@@ -121,8 +129,8 @@ func ConfigureLoginCommand(app *CliApp) {
 		Required().StringVar(&cmd.Email)
 	login.Flag("api-url", "url of Brightbox API").
 		Default("https://api.gb1.brightbox.com").StringVar(&cmd.ApiUrl)
-	login.Flag("auth-url", "url of Brightbox API authentication endpoint").
-		Default("https://api.gb1.brightbox.com").StringVar(&cmd.AuthUrl)
+	login.Flag("auth-url", "url of Brightbox API authentication endpoint. Defaults to same as api-url.").
+		StringVar(&cmd.AuthUrl)
 	login.Flag("client-id", "OAuth client identifier to use").
 		Default("app-12345").StringVar(&cmd.ClientId)
 	login.Flag("secret", "OAuth client secret to use").

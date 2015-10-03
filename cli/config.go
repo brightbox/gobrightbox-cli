@@ -1,15 +1,11 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/casimir/xdg-go"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"io/ioutil"
+	"gopkg.in/ini.v1"
 	"os"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 var (
@@ -32,33 +28,27 @@ func NewConfig() (*Config, error) {
 	return c, nil
 }
 
-func (c *Config) Clients() (clients []Client, err error) {
-	filenames, err := filepath.Glob(xdgapp.ConfigPath("*.client.json"))
-	if err != nil {
-		return
-	}
-	for _, f := range filenames {
-		f = path.Base(strings.TrimSuffix(f, ".client.json"))
-		client, err := c.Client(f)
-
-		if err == nil {
-			c.clients[f] = *client
-			clients = append(clients, *client)
-		}
-	}
-	return clients, nil
-}
-
 func (c *Config) SaveClientConfig(client *Client) error {
 	if client == nil {
 		panic("Can't save client config for nil client")
 	}
-	j, err := json.MarshalIndent(client, "", "  ")
-	if err != nil {
+
+	filename := xdgapp.ConfigPath("config")
+	cfg, err := ini.Load(filename)
+	if os.IsNotExist(err) {
+		cfg = ini.Empty()
+	} else if err != nil {
 		return err
 	}
-	filename := xdgapp.ConfigPath(client.ClientName + ".client.json")
-	err = ioutil.WriteFile(filename, j, 0600)
+
+	section := cfg.Section(client.ClientName)
+	section.Key("client_id").SetValue(client.ClientID)
+	section.Key("secret").SetValue(client.Secret)
+	section.Key("api_url").SetValue(client.ApiUrl)
+	section.Key("auth_url").SetValue(client.AuthUrl)
+	section.Key("default_account").SetValue(client.DefaultAccount)
+	section.Key("username").SetValue(client.Username)
+	err = cfg.SaveTo(filename)
 	if err != nil {
 		return err
 	}
@@ -67,24 +57,9 @@ func (c *Config) SaveClientConfig(client *Client) error {
 
 func (c *Config) Client(cname string) (*Client, error) {
 	client, exists := c.clients[cname]
-	if exists == true {
-		return &client, nil
-	}
-	filename := xdgapp.ConfigPath(cname + ".client.json")
-	jd, err := ioutil.ReadFile(filename)
-	if os.IsNotExist(err) {
+	if exists == false {
 		return nil, fmt.Errorf("client '%s' not found in config.", cname)
 	}
-	if err != nil {
-		return nil, err
-	}
-	client = Client{}
-	err = json.Unmarshal(jd, &client)
-	if err != nil {
-		return nil, err
-	}
-	client.ClientName = cname
-	c.clients[cname] = client
 	return &client, nil
 }
 
@@ -95,13 +70,7 @@ func (c *Config) CurrentClient() *Client {
 func (c *Config) DefaultClient() *Client {
 	client, err := c.Client(c.defaultClientName)
 	if err != nil && client == nil {
-		clients, err := c.Clients()
-		if err != nil {
-			return nil
-		}
-		if len(clients) > 0 {
-			client = &clients[0]
-		}
+		return nil
 	}
 	return client
 }
@@ -118,42 +87,59 @@ func (c *Config) Setup() error {
 	if c.clients == nil {
 		c.clients = make(map[string]Client)
 	}
-	err = c.ReadGlobal()
+	err = c.Read()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Config) ReadGlobal() error {
-	filename := xdgapp.ConfigPath("cli.json")
-	jd, err := ioutil.ReadFile(filename)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
+func (c *Config) Read() error {
+	filename := xdgapp.ConfigPath("config")
+	cfg, err := ini.Load(filename)
 	if os.IsNotExist(err) {
 		return nil
 	}
-
-	globalConf := make(map[string]string)
-	err = json.Unmarshal(jd, &globalConf)
 	if err != nil {
 		return err
 	}
-	c.defaultClientName = globalConf["default_client"]
+	core := cfg.Section("core")
+	c.defaultClientName = core.Key("default_client").String()
+	for _, sec := range cfg.Sections() {
+		if sec.Name() != "DEFAULT" && sec.Name() != "core" {
+			cs := new(Client)
+			cs.ClientName = sec.Name()
+			if cs.ClientName == "" {
+				continue
+			}
+			err = sec.MapTo(cs)
+			if err != nil {
+				continue
+			}
+			c.clients[cs.ClientName] = *cs
+			if c.defaultClientName == "" {
+				c.defaultClientName = cs.ClientName
+			}
+
+		}
+	}
 	return nil
+
 }
 
-func (c *Config) WriteGlobal() error {
-	filename := xdgapp.ConfigPath("cli.json")
-
-	globalConf := make(map[string]string)
-	globalConf["default_client"] = c.defaultClientName
-	jd, err := json.MarshalIndent(globalConf, "", "  ")
-	if err != nil {
+func (c *Config) Write() error {
+	filename := xdgapp.ConfigPath("config")
+	cfg, err := ini.Load(filename)
+	if os.IsNotExist(err) {
+		cfg = ini.Empty()
+	} else if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filename, jd, 0600)
+
+	section := cfg.Section("core")
+	key := section.Key("default_client")
+	key.SetValue(c.defaultClientName)
+	err = cfg.SaveTo(filename)
 	if err != nil {
 		return err
 	}
@@ -186,12 +172,8 @@ func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
 	w := tabWriter()
 	defer w.Flush()
 	listRec(w, "NAME", "CLIENTID", "SECRET", "API_URL", "AUTH_URL")
-	clients, err := cfg.Clients()
-	if err != nil {
-		return err
-	}
 	dc := cfg.DefaultClient()
-	for _, c := range clients {
+	for _, c := range cfg.clients {
 		name := c.ClientName
 		if dc != nil && dc.ClientName == name {
 			name = "*" + name
