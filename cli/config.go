@@ -161,7 +161,12 @@ func (c *Config) SetClient(clientName string) error {
 }
 
 type ConfigCommand struct {
-	Id string
+	*CliApp
+	Id      string
+	Secret  string
+	ApiUrl  string
+	AuthUrl string
+	Name string
 }
 
 func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
@@ -180,6 +185,37 @@ func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
 		}
 		listRec(w, name, c.ClientID, c.Secret,
 			c.ApiUrl, c.findAuthUrl())
+	}
+	return nil
+}
+
+func (l *ConfigCommand) add(pc *kingpin.ParseContext) error {
+	err := l.Configure()
+	if err != nil {
+		return err
+	}
+
+	client := new(Client)
+	client.ClientName = l.Id
+	if l.Name != "" {
+		client.ClientName = l.Name
+	}
+	client.ClientID = l.Id
+	client.Secret = l.Secret
+	client.ApiUrl = l.ApiUrl
+	client.AuthUrl = l.AuthUrl
+	fmt.Printf("%s\n", client.AuthUrl)
+	if client.AuthUrl == "" {
+		client.AuthUrl = l.ApiUrl
+	}
+
+	err = l.Config.SaveClientConfig(client)
+	if err != nil {
+		l.Fatalf("Couldn't save client config %s: %s", client.ClientName, err)
+	}
+	if l.Config.DefaultClient() == nil {
+		l.Config.defaultClientName = client.ClientName
+		l.Config.Write()
 	}
 	return nil
 }
@@ -211,10 +247,20 @@ func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureConfigCommand(app *CliApp) {
-	c := &ConfigCommand{}
+	c := &ConfigCommand{CliApp: app}
 	configcmd := app.Command("config", "manage cli configuration")
 	configcmd.Command("list", "list local client configurations").
 		Default().Action(c.list)
 	show := configcmd.Command("show", "view details on a client config").Action(c.show)
 	show.Arg("name", "name or id of client config").Required().StringVar(&c.Id)
+	clients := configcmd.Command("clients", "manage clients in local config")
+	cadd := clients.Command("add", "Add new API client details to the local config").
+		Action(c.add)
+	cadd.Arg("client_id", "id of api client. e.g: cli-xxxxx").Required().StringVar(&c.Id)
+	cadd.Arg("client_secet", "secret of the api client").Required().StringVar(&c.Secret)
+	cadd.Flag("api-url", "url of Brightbox API").
+		Default("https://api.gb1.brightbox.com").StringVar(&c.ApiUrl)
+	cadd.Flag("auth-url", "url of Brightbox API authentication endpoint. Defaults to same as api-url.").
+		StringVar(&c.AuthUrl)
+	cadd.Flag("name", "an alias for the client config").StringVar(&c.Name)
 }
