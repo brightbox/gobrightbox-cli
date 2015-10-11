@@ -166,7 +166,7 @@ type ConfigCommand struct {
 	Secret  string
 	ApiUrl  string
 	AuthUrl string
-	Name string
+	Name    string
 }
 
 func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
@@ -220,6 +220,22 @@ func (l *ConfigCommand) add(pc *kingpin.ParseContext) error {
 	return nil
 }
 
+func (l *ConfigCommand) dflt(pc *kingpin.ParseContext) error {
+	err := l.Configure()
+	if err != nil {
+		return err
+	}
+
+	client, err := l.Config.Client(l.Name)
+	if client == nil || err != nil {
+		l.Fatalf("client '%s' not found in config.", l.Name)
+	}
+
+	l.Config.defaultClientName = l.Name
+	l.Config.Write()
+	return nil
+}
+
 func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
 	cfg, err := NewConfig()
 	if err != nil {
@@ -248,12 +264,15 @@ func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
 
 func ConfigureConfigCommand(app *CliApp) {
 	c := &ConfigCommand{CliApp: app}
-	configcmd := app.Command("config", "manage cli configuration")
-	configcmd.Command("list", "list local client configurations").
+	cmd := app.Command("config", "manage cli configuration")
+	clients := cmd.Command("clients", "manage clients in local config")
+
+	clients.Command("list", "list local client configurations").
 		Default().Action(c.list)
-	show := configcmd.Command("show", "view details on a client config").Action(c.show)
+
+	show := clients.Command("show", "view details on a client config").Action(c.show)
 	show.Arg("name", "name or id of client config").Required().StringVar(&c.Id)
-	clients := configcmd.Command("clients", "manage clients in local config")
+
 	cadd := clients.Command("add", "Add new API client details to the local config").
 		Action(c.add)
 	cadd.Arg("client_id", "id of api client. e.g: cli-xxxxx").Required().StringVar(&c.Id)
@@ -263,4 +282,8 @@ func ConfigureConfigCommand(app *CliApp) {
 	cadd.Flag("auth-url", "url of Brightbox API authentication endpoint. Defaults to same as api-url.").
 		StringVar(&c.AuthUrl)
 	cadd.Flag("name", "an alias for the client config").StringVar(&c.Name)
+
+	dflt := clients.Command("default", "Set a client as the default").
+		Action(c.dflt)
+	dflt.Arg("name", "name of the client to set as default").Required().StringVar(&c.Name)
 }
