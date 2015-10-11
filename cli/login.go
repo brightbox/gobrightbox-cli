@@ -25,23 +25,33 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 		return err
 	}
 
-	clientName := l.Email
-	email := l.Email
-	if strings.Contains(email, "/") {
-		toks := strings.SplitN(email, "/", 2)
-		email = toks[0]
-	}
 	var client *Client
+	clientName := l.Email
 	if l.ClientName == "" {
-		client, err = l.Config.Client(clientName)
-		if err != nil {
-			client = new(Client)
-		}
+		client, _ = l.Config.Client(clientName)
 	} else {
 		client, err = l.Config.Client(clientName)
 		if err != nil {
 			l.Fatalf("Couldn't find client config %s: %s", clientName, err)
 		}
+	}
+
+	if l.Email == "" && client != nil {
+			l.Email = client.Username
+	}
+
+	if l.Email == "" {
+		l.Fatalf("required argument 'email address' not provided")
+	}
+
+	if client == nil {
+		client = new(Client)
+	}
+
+	email := l.Email
+	if strings.Contains(email, "/") {
+		toks := strings.SplitN(email, "/", 2)
+		email = toks[0]
 	}
 	client.ClientName = clientName
 	if l.ClientId != "" {
@@ -52,6 +62,9 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 	}
 	if l.ApiUrl != "" {
 		client.ApiUrl = l.ApiUrl
+	}
+	if client.ApiUrl == "" {
+		client.ApiUrl = "https://api.gb1.brightbox.com"
 	}
 	if l.AuthUrl != "" {
 		client.AuthUrl = l.AuthUrl
@@ -70,7 +83,7 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 	var token *oauth2.Token
 	switch oc := oc.(type) {
 	case oauth2.Config:
-		fmt.Printf("Password for %s: ", client.Username)
+		fmt.Printf("Password for %s: ", client.ClientName)
 		password := gopass.GetPasswd()
 		if string(password) == "" {
 			l.Fatalf("Password not provided.")
@@ -126,10 +139,10 @@ func ConfigureLoginCommand(app *CliApp) {
 	cmd := LoginCommand{CliApp: app}
 	login := app.Command("login", "Authenticate with user credentials").Action(cmd.login)
 	login.Arg("email address", "Your user's email address").
-		Required().StringVar(&cmd.Email)
-	login.Flag("api-url", "url of Brightbox API").
-		Default("https://api.gb1.brightbox.com").StringVar(&cmd.ApiUrl)
-	login.Flag("auth-url", "url of Brightbox API authentication endpoint. Defaults to same as api-url.").
+		StringVar(&cmd.Email)
+	login.Flag("api-url", "Custom Brightbox API URL. Defaults to https://api.gb1s.brightbox.com").
+		StringVar(&cmd.ApiUrl)
+	login.Flag("auth-url", "URL of Brightbox API authentication endpoint. Defaults to same as api-url.").
 		StringVar(&cmd.AuthUrl)
 	login.Flag("client-id", "OAuth client identifier to use").
 		Default("app-12345").StringVar(&cmd.ClientId)
