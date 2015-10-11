@@ -8,7 +8,7 @@ import (
 )
 
 type ImagesCommand struct {
-	App     *CliApp
+	*CliApp
 	Id      string
 	IdList  []string
 	ShowAll bool
@@ -53,7 +53,7 @@ func (il imagesForDisplay) sortKeys(i int) []interface{} {
 }
 
 func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -62,13 +62,13 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 	// later anyway.
 	achan := make(chan string)
 	go func() {
-		achan <- l.App.accountId()
+		achan <- l.accountId()
 	}()
 
 	w := tabWriter()
 	defer w.Flush()
 
-	images, err := l.App.Client.Images()
+	images, err := l.Client.Images()
 	if err != nil {
 		return err
 	}
@@ -116,15 +116,15 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 
 func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
 
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, err := l.App.Client.Image(l.Id)
+	s, err := l.Client.Image(l.Id)
 	if err != nil {
-		l.App.Fatalf(err.Error())
+		l.Fatalf(err.Error())
 	}
 
 	owner := s.Owner
@@ -157,16 +157,16 @@ func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func (l *ImagesCommand) destroy(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Destroying image %s\n", id)
-		err := l.App.Client.DestroyImage(id)
+		err := l.Client.DestroyImage(id)
 		if err != nil {
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -177,7 +177,7 @@ func (l *ImagesCommand) destroy(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureImagesCommand(app *CliApp) {
-	cmd := ImagesCommand{App: app}
+	cmd := ImagesCommand{CliApp: app}
 	images := app.Command("images", "Manage server images")
 	list := images.Command("list", "List server images").Default().Action(cmd.list)
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)

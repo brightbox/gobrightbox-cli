@@ -5,19 +5,19 @@ import (
 )
 
 type AccountsCommand struct {
-	App *CliApp
+	*CliApp
 	Id  string
 }
 
 func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 	defer w.Flush()
-	accounts, err := l.App.Client.Accounts()
+	accounts, err := l.Client.Accounts()
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureAccountsCommand(app *CliApp) {
-	cmd := AccountsCommand{App: app}
+	cmd := AccountsCommand{CliApp: app}
 	accounts := app.Command("accounts", "manage accounts")
 	accounts.Command("list", "list accounts").Default().Action(cmd.list)
 }

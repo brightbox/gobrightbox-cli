@@ -42,7 +42,6 @@ func (c *Client) Setup(accountId string) error {
 	return nil
 }
 
-
 func (c *Client) findAuthUrl() string {
 	var err error
 	var u *url.URL

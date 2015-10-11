@@ -8,7 +8,7 @@ import (
 )
 
 type ServerGroupsCommand struct {
-	App         *CliApp
+	*CliApp
 	Id          string
 	Dst         string
 	IdList      []string
@@ -17,11 +17,11 @@ type ServerGroupsCommand struct {
 }
 
 func (l *ServerGroupsCommand) list(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
-	groups, err := l.App.Client.ServerGroups()
+	groups, err := l.Client.ServerGroups()
 	if err != nil {
 		return err
 	}
@@ -36,15 +36,15 @@ func (l *ServerGroupsCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) show(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	g, err := l.App.Client.ServerGroup(l.Id)
+	g, err := l.Client.ServerGroup(l.Id)
 	if err != nil {
-		l.App.Fatalf(err.Error())
+		l.Fatalf(err.Error())
 	}
 
 	drawShow(w, []interface{}{
@@ -60,7 +60,7 @@ func (l *ServerGroupsCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) create(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (l *ServerGroupsCommand) create(pc *kingpin.ParseContext) error {
 		Description: l.Description,
 	}
 
-	group, err := l.App.Client.CreateServerGroup(&newGroup)
+	group, err := l.Client.CreateServerGroup(&newGroup)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (l *ServerGroupsCommand) create(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) update(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (l *ServerGroupsCommand) update(pc *kingpin.ParseContext) error {
 		Name:        l.Name,
 		Description: l.Description,
 	}
-	group, err := l.App.Client.UpdateServerGroup(&updateGroup)
+	group, err := l.Client.UpdateServerGroup(&updateGroup)
 	if err != nil {
 		return err
 	}
@@ -104,16 +104,16 @@ func (l *ServerGroupsCommand) update(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) destroy(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Destroying server group %s\n", id)
-		err := l.App.Client.DestroyServerGroup(id)
+		err := l.Client.DestroyServerGroup(id)
 		if err != nil {
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -124,12 +124,12 @@ func (l *ServerGroupsCommand) destroy(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) add(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Adding servers %s to server group %s\n", strings.Join(l.IdList, ", "), l.Id)
-	_, err = l.App.Client.AddServersToServerGroup(l.Id, l.IdList)
+	_, err = l.Client.AddServersToServerGroup(l.Id, l.IdList)
 	if err != nil {
 		return err
 	}
@@ -137,12 +137,12 @@ func (l *ServerGroupsCommand) add(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) remove(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Removing servers %s to server group %s\n", strings.Join(l.IdList, ", "), l.Id)
-	_, err = l.App.Client.RemoveServersFromServerGroup(l.Id, l.IdList)
+	_, err = l.Client.RemoveServersFromServerGroup(l.Id, l.IdList)
 	if err != nil {
 		return err
 	}
@@ -150,12 +150,12 @@ func (l *ServerGroupsCommand) remove(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServerGroupsCommand) move(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Moving servers %s from server group %s to server group %s\n", strings.Join(l.IdList, ", "), l.Dst, l.Id)
-	_, err = l.App.Client.MoveServersToServerGroup(l.Id, l.Dst, l.IdList)
+	_, err = l.Client.MoveServersToServerGroup(l.Id, l.Dst, l.IdList)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (l *ServerGroupsCommand) move(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureServerGroupsCommand(app *CliApp) {
-	cmd := ServerGroupsCommand{App: app}
+	cmd := ServerGroupsCommand{CliApp: app}
 	groups := app.Command("groups", "manage server groups")
 	groups.Command("list", "list server groups").
 		Default().Action(cmd.list)

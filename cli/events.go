@@ -11,7 +11,7 @@ import (
 )
 
 type EventsCommand struct {
-	App    *CliApp
+	*CliApp
 	Id     string
 	Format string
 }
@@ -78,14 +78,14 @@ func recvmsg(ws *websocket.Conn) ([]FayeMsg, error) {
 }
 
 func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
 
-	token, err := l.App.Client.TokenSource().Token()
+	token, err := l.Client.TokenSource().Token()
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 		SupportedConnectionTypes: []string{"long-polling", "websocket"},
 	}
 
-	url := "wss://events." + l.App.Client.findRegionDomain() + "/stream"
+	url := "wss://events." + l.Client.findRegionDomain() + "/stream"
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 	subscribe := FayeMsg{
 		Channel:      "/meta/subscribe",
 		ClientId:     cid,
-		Subscription: "/account/" + l.App.accountId(),
+		Subscription: "/account/" + l.accountId(),
 		Ext:          &FayeAuth{AuthToken: token.AccessToken},
 	}
 	err = sendmsg(ws, &connect, &subscribe)
@@ -189,7 +189,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureEventsCommand(app *CliApp) {
-	cmd := EventsCommand{App: app}
+	cmd := EventsCommand{CliApp: app}
 	events := app.Command("events", "view event stream")
 	events.Command("watch", "listen for events and output them").Action(cmd.watch)
 }

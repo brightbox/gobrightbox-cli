@@ -11,7 +11,7 @@ import (
 )
 
 type ServersCommand struct {
-	App               *CliApp
+	*CliApp
 	All               bool
 	Id                string
 	IdList            []string
@@ -27,7 +27,7 @@ type ServersCommand struct {
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 	if l.Groups != nil {
 		groupFilter = strings.Split(*l.Groups, ",")
 	}
-	servers, err := l.App.Client.Servers()
+	servers, err := l.Client.Servers()
 	if err != nil {
 		return err
 	}
@@ -66,15 +66,15 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, err := l.App.Client.Server(l.Id)
+	s, err := l.Client.Server(l.Id)
 	if err != nil {
-		l.App.Fatalf(err.Error())
+		l.Fatalf(err.Error())
 	}
 
 	drawShow(w, []interface{}{
@@ -111,7 +111,7 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 	}
 
 	if l.Zone != "" {
-		zoneId, err := l.App.Client.resolveZoneId(l.Zone)
+		zoneId, err := l.Client.resolveZoneId(l.Zone)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 	}
 
 	if l.ServerType != "" {
-		typeId, err := l.App.Client.resolveServerTypeId(l.ServerType)
+		typeId, err := l.Client.resolveServerTypeId(l.ServerType)
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 		return fmt.Errorf("User data cannot exceed 16k")
 	}
 
-	server, err := l.App.Client.CreateServer(&newServer)
+	server, err := l.Client.CreateServer(&newServer)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -245,12 +245,12 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 
 		fmt.Printf("Updating server %s\n", id)
 		updateServer.Id = id
-		server, err := l.App.Client.UpdateServer(&updateServer)
+		server, err := l.Client.UpdateServer(&updateServer)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 			continue
 		}
@@ -266,16 +266,16 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Destroying server %s\n", id)
-		err := l.App.Client.DestroyServer(id)
+		err := l.Client.DestroyServer(id)
 		if err != nil {
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -286,19 +286,19 @@ func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Stopping server %s\n", id)
-		err := l.App.Client.StopServer(id)
+		err := l.Client.StopServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -309,19 +309,19 @@ func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Starting server %s\n", id)
-		err := l.App.Client.StartServer(id)
+		err := l.Client.StartServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -332,19 +332,19 @@ func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Rebooting server %s\n", id)
-		err := l.App.Client.RebootServer(id)
+		err := l.Client.RebootServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -355,19 +355,19 @@ func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Resetting server %s\n", id)
-		err := l.App.Client.ResetServer(id)
+		err := l.Client.ResetServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -378,19 +378,19 @@ func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Shutting down server %s\n", id)
-		err := l.App.Client.ShutdownServer(id)
+		err := l.Client.ShutdownServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -401,19 +401,19 @@ func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Locking server %s\n", id)
-		err := l.App.Client.LockServer(id)
+		err := l.Client.LockServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -424,19 +424,19 @@ func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Unlocking server %s\n", id)
-		err := l.App.Client.UnlockServer(id)
+		err := l.Client.UnlockServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 		}
 	}
@@ -447,19 +447,19 @@ func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Snapshotting server %s\n", id)
-		img, err := l.App.Client.SnapshotServer(id)
+		img, err := l.Client.SnapshotServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 			continue
 		}
@@ -472,19 +472,19 @@ func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
 }
 
 func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	returnError := false
 	for _, id := range l.IdList {
 		fmt.Printf("Activating console for server %s\n", id)
-		srv, err := l.App.Client.ActivateConsoleForServer(id)
+		srv, err := l.Client.ActivateConsoleForServer(id)
 		if err != nil {
 			if len(l.IdList) == 1 {
 				return err
 			}
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 			returnError = true
 			continue
 		}
@@ -497,7 +497,7 @@ func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
 }
 
 func ConfigureServersCommand(app *CliApp) {
-	cmd := ServersCommand{App: app}
+	cmd := ServersCommand{CliApp: app}
 	servers := app.Command("servers", "Manage cloud servers")
 	list := servers.Command("list", "List cloud servers").
 		Default().Action(cmd.list)

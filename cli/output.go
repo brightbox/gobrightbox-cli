@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -36,12 +34,6 @@ func drawShow(w io.Writer, d []interface{}) {
 		fmt.Fprint(w, d[i], ": \t", d[i+1])
 		w.Write([]byte{'\n'})
 	}
-}
-
-func PrettyPrintJson(body []byte) *bytes.Buffer {
-	var out bytes.Buffer
-	json.Indent(&out, body, "", "\t")
-	return &out
 }
 
 func formatTime(t *time.Time) string {

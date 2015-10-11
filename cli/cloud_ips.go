@@ -8,7 +8,7 @@ import (
 )
 
 type CloudIPsCommand struct {
-	App          *CliApp
+	*CliApp
 	All          bool
 	Id           string
 	IdList       []string
@@ -30,14 +30,14 @@ func cloudIPDestinationId(cip *brightbox.CloudIP) string {
 }
 
 func (l *CloudIPsCommand) list(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 
 	w := tabWriter()
 	defer w.Flush()
-	CloudIPs, err := l.App.Client.CloudIPs()
+	CloudIPs, err := l.Client.CloudIPs()
 	if err != nil {
 		return err
 	}
@@ -52,15 +52,15 @@ func (l *CloudIPsCommand) list(pc *kingpin.ParseContext) error {
 }
 
 func (l *CloudIPsCommand) show(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	w := tabWriterRight()
 	defer w.Flush()
-	s, err := l.App.Client.CloudIP(l.Id)
+	s, err := l.Client.CloudIP(l.Id)
 	if err != nil {
-		l.App.Fatalf(err.Error())
+		l.Fatalf(err.Error())
 	}
 
 	drawShow(w, []interface{}{
@@ -78,22 +78,22 @@ func (l *CloudIPsCommand) show(pc *kingpin.ParseContext) error {
 }
 
 func (l *CloudIPsCommand) destroy(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
 	for _, id := range l.IdList {
 		fmt.Printf("Destroying Cloud IP %s\n", id)
-		err := l.App.Client.DestroyCloudIP(id)
+		err := l.Client.DestroyCloudIP(id)
 		if err != nil {
-			l.App.Errorf("%s: %s", err.Error(), id)
+			l.Errorf("%s: %s", err.Error(), id)
 		}
 	}
 	return nil
 }
 
 func ConfigureCloudIPsCommand(app *CliApp) {
-	cmd := CloudIPsCommand{App: app}
+	cmd := CloudIPsCommand{CliApp: app}
 	cloudips := app.Command("cloudips", "Manage Cloud IPs")
 	cloudips.Command("list", "List Cloud IPs").Action(cmd.list)
 	show := cloudips.Command("show", "View details on a Cloud IP").Action(cmd.show)

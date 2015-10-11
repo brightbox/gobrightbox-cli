@@ -7,14 +7,14 @@ import (
 )
 
 type TokenCommand struct {
-	App    *CliApp
+	*CliApp
 	Id     string
 	Force  bool
 	Format string
 }
 
 func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
@@ -22,11 +22,11 @@ func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
 	defer w.Flush()
 
 	if l.Force {
-		l.App.Client.TokenCache().Clear()
+		l.Client.TokenCache().Clear()
 	}
-	token, err := l.App.Client.TokenSource().Token()
+	token, err := l.Client.TokenSource().Token()
 	if token == nil {
-		l.App.Fatalf("No cached OAuth token found for %s", l.App.ClientName)
+		l.Fatalf("No cached OAuth token found for %s", l.ClientName)
 	}
 	switch l.Format {
 	case "json":
@@ -41,23 +41,23 @@ func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
 			"expiry", token.Expiry,
 		})
 	case "curl":
-		fmt.Fprintf(w, "curl -H 'Authorization: Bearer %s' %s\n", token.AccessToken, l.App.Client.ApiUrl)
+		fmt.Fprintf(w, "curl -H 'Authorization: Bearer %s' %s\n", token.AccessToken, l.Client.ApiUrl)
 	}
 
 	return nil
 }
 
 func (l *TokenCommand) clear(pc *kingpin.ParseContext) error {
-	err := l.App.Configure()
+	err := l.Configure()
 	if err != nil {
 		return err
 	}
-	l.App.Client.TokenCache().Clear()
+	l.Client.TokenCache().Clear()
 	return nil
 }
 
 func ConfigureTokenCommand(app *CliApp) {
-	cmd := TokenCommand{App: app}
+	cmd := TokenCommand{CliApp: app}
 	token := app.Command("token", "manage oauth tokens")
 	create := token.Command("create", "return a valid token for the client, create one if necessary").Action(cmd.create)
 	create.Flag("clear", "clear the local cache first and create a new token").BoolVar(&cmd.Force)

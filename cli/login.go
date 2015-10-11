@@ -37,7 +37,7 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 	}
 
 	if l.Email == "" && client != nil {
-			l.Email = client.Username
+		l.Email = client.Username
 	}
 
 	if l.Email == "" {

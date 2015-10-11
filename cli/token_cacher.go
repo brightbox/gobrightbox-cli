@@ -37,7 +37,7 @@ func (tc *TokenCacher) Read() *oauth2.Token {
 func (tc *TokenCacher) jsonFilename() *string {
 	r := strings.NewReplacer("/", "__", "\\", "__", ":", "__")
 	key := r.Replace(tc.Key)
-	filename := xdgapp.CachePath(key+".oauth_token.json")
+	filename := xdgapp.CachePath(key + ".oauth_token.json")
 	return &filename
 }
 
