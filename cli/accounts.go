@@ -33,5 +33,5 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 func ConfigureAccountsCommand(app *CliApp) {
 	cmd := AccountsCommand{App: app}
 	accounts := app.Command("accounts", "manage accounts")
-	accounts.Command("list", "list accounts").Action(cmd.list)
+	accounts.Command("list", "list accounts").Default().Action(cmd.list)
 }
