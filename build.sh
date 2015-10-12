@@ -1,13 +1,15 @@
 #!/bin/sh
 
+set -ex
+
 go get -v -t -d
 
-mkdir bin/
+mkdir -p bin/
 
 for GOOS in windows darwin linux; do
 	for GOARCH in 386 amd64; do
 		export GOOS GOARCH
-		go build -v -o bin/gobrightbox-$GOOS-$GOARCH
+		go build -o bin/gobrightbox-$GOOS-$GOARCH
 	done
 done
 
