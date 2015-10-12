@@ -6,11 +6,16 @@ go get -v -t -d
 
 mkdir -p bin/
 
-for GOOS in windows darwin linux; do
+export GOOS GOARCH
+for GOOS in darwin linux; do
 	for GOARCH in 386 amd64; do
-		export GOOS GOARCH
 		go build -o bin/gobrightbox-$GOOS-$GOARCH
 	done
+done
+
+GOOS=windows
+for GOARCH in 386 amd64; do
+	go build -o bin/gobrightbox-$GOOS-$GOARCH.exe
 done
 
 cd bin/
