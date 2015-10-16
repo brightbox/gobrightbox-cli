@@ -10,6 +10,78 @@ import (
 	"time"
 )
 
+type FieldOutput struct {
+	Writer *tabwriter.Writer
+}
+
+type RowFieldOutput struct {
+	FieldOutput
+	FieldOrder []string
+}
+
+type ShowFieldOutput struct {
+	FieldOutput
+	FieldOrder []string
+}
+
+func (fo *FieldOutput) Flush() {
+	fo.Writer.Flush()
+}
+
+func (fo *RowFieldOutput) Setup(fieldorder []string) {
+	fo.Writer = tabwriter.NewWriter(os.Stdout, 1, 2, 2, ' ', 0)
+	fo.FieldOrder = fieldorder
+}
+
+func (fo *ShowFieldOutput) Setup(fieldorder []string) {
+	fo.Writer = tabwriter.NewWriter(os.Stdout, 1, 2, 2, ' ', tabwriter.AlignRight)
+	fo.FieldOrder = fieldorder
+}
+
+func (fo *RowFieldOutput) SendHeader() {
+	for i, f := range fo.FieldOrder {
+		fmt.Fprint(fo.Writer, strings.ToUpper(f))
+		if i+1 < len(fo.FieldOrder) {
+			fo.Writer.Write([]byte{'\t'})
+		} else {
+			fo.Writer.Write([]byte{'\n'})
+		}
+	}
+}
+func (fo *RowFieldOutput) Write(fields map[string]string) error {
+	for i, f := range fo.FieldOrder {
+		v, ok := fields[f]
+		if ok == false {
+			return fmt.Errorf("No field named '%s' available for display", f)
+		}
+		fmt.Fprint(fo.Writer, v)
+		if i+1 < len(fo.FieldOrder) {
+			fo.Writer.Write([]byte{'\t'})
+		} else {
+			fo.Writer.Write([]byte{'\n'})
+		}
+	}
+	return nil
+}
+func (fo *ShowFieldOutput) Write(fields map[string]string) error {
+	var order = fo.FieldOrder
+	if len(order) == 1 && order[0] == "all" {
+		order = []string{}
+		for k := range fields {
+			order = append(order, k)
+		}
+	}
+	for _, f := range order {
+		v, ok := fields[f]
+		if ok == false {
+			return fmt.Errorf("No field named '%s' available for display", f)
+		}
+		fmt.Fprint(fo.Writer, f, ": \t", v)
+		fo.Writer.Write([]byte{'\n'})
+	}
+	return nil
+}
+
 func tabWriter() *tabwriter.Writer {
 	return tabwriter.NewWriter(os.Stdout, 1, 2, 2, ' ', 0)
 }
@@ -42,6 +114,12 @@ func formatTime(t *time.Time) string {
 	} else {
 		return ""
 	}
+}
+func formatBool(t bool) string {
+	return fmt.Sprintf("%v", t)
+}
+func formatInt(t int) string {
+	return fmt.Sprintf("%d", t)
 }
 func collectById(resources interface{}) string {
 	return collectByField(resources, "Id")

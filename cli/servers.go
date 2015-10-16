@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+const (
+	DefaultServerListFields = "id,status,type,zone,created,image,cloud_ips,name"
+	DefaultServerShowFields = "id,status,locked,name,created_at,deleted_at,zone,type,type_name,type,ram,cores,disk,compatibility_mode,image,image_name,arch,private_ips,cloud_ips,ipv6_ips,cloud_ips,hostname,fqdn,public_hostname,ipv6_hostname,snapshots,server_groups"
+)
+
 type ServersCommand struct {
 	*CliApp
 	All               bool
@@ -24,6 +29,41 @@ type ServersCommand struct {
 	UserDataFile      *os.File
 	Base64            bool
 	CompatibilityMode *bool
+	Fields            string
+}
+
+func ServerFields(s brightbox.Server) map[string]string {
+	return map[string]string{
+		"id":                 s.Id,
+		"status":             s.Status,
+		"locked":             formatBool(s.Locked),
+		"name":               s.Name,
+		"created":            s.CreatedAt.Format("2006-01-02"),
+		"created_at":         formatTime(s.CreatedAt),
+		"deleted_at":         formatTime(s.DeletedAt),
+		"zone":               s.Zone.Handle,
+		"zone_id":            s.Zone.Id,
+		"type":               s.ServerType.Handle,
+		"type_name":          s.ServerType.Name,
+		"type_id":            s.ServerType.Id,
+		"ram":                formatInt(s.ServerType.Ram),
+		"cores":              formatInt(s.ServerType.Cores),
+		"disk":               formatInt(s.ServerType.DiskSize),
+		"compatibility_mode": formatBool(s.CompatibilityMode),
+		"image":              s.Image.Id,
+		"image_name":         s.Image.Name,
+		"arch":               s.Image.Arch,
+		"private_ips":        collectByField(s.Interfaces, "IPv4Address"),
+		"cloud_ip_ids":       collectByField(s.CloudIPs, "PublicIP"),
+		"ipv6_ips":           collectByField(s.Interfaces, "IPv6Address"),
+		"cloud_ips":          collectById(s.CloudIPs),
+		"hostname":           s.Hostname,
+		"fqdn":               s.Fqdn,
+		"public_hostname":    "public." + s.Fqdn,
+		"ipv6_hostname":      "ipv6." + s.Fqdn,
+		"snapshots":          collectById(s.Snapshots),
+		"server_groups":      collectById(s.ServerGroups),
+	}
 }
 
 func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
@@ -32,8 +72,6 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 		return err
 	}
 
-	w := tabWriter()
-	defer w.Flush()
 	var groupFilter []string
 	if l.Groups != nil {
 		groupFilter = strings.Split(*l.Groups, ",")
@@ -42,7 +80,10 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	listRec(w, "ID", "STATUS", "TYPE", "ZONE", "CREATED", "IMAGE", "CLOUDIPS", "NAME")
+	out := new(RowFieldOutput)
+	out.Setup(strings.Split(l.Fields, ","))
+
+	out.SendHeader()
 	for _, s := range *servers {
 		if len(groupFilter) > 0 {
 			matches := 0
@@ -57,11 +98,12 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 				continue
 			}
 		}
-		listRec(
-			w, s.Id, s.Status, s.ServerType.Handle,
-			s.Zone.Handle, s.CreatedAt.Format("2006-01-02"),
-			s.Image.Id, collectById(s.CloudIPs), s.Name)
+		if err = out.Write(ServerFields(s)); err != nil {
+			return err
+		}
+
 	}
+	out.Flush()
 	return nil
 }
 
@@ -70,42 +112,17 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	w := tabWriterRight()
-	defer w.Flush()
 	s, err := l.Client.Server(l.Id)
 	if err != nil {
 		l.Fatalf(err.Error())
 	}
+	out := new(ShowFieldOutput)
+	out.Setup(strings.Split(l.Fields, ","))
 
-	drawShow(w, []interface{}{
-		"id", s.Id,
-		"status", s.Status,
-		"locked", s.Locked,
-		"name", s.Name,
-		"created_at", formatTime(s.CreatedAt),
-		"deleted_at", formatTime(s.DeletedAt),
-		"zone", s.Zone.Handle,
-		"type", s.ServerType.Id,
-		"type_name", s.ServerType.Name,
-		"type_handle", s.ServerType.Handle,
-		"ram", s.ServerType.Ram,
-		"cores", s.ServerType.Cores,
-		"disk", s.ServerType.DiskSize,
-		"compatibility_mode", s.CompatibilityMode,
-		"image", s.Image.Id,
-		"image_name", s.Image.Name,
-		"arch", s.Image.Arch,
-		"private_ips", collectByField(s.Interfaces, "IPv4Address"),
-		"cloud_ips", collectByField(s.CloudIPs, "PublicIP"),
-		"ipv6_ips", collectByField(s.Interfaces, "IPv6Address"),
-		"cloud_ip_ids", collectByField(s.CloudIPs, "Id"),
-		"hostname", s.Hostname,
-		"fqdn", s.Fqdn,
-		"public_hostname", "public." + s.Fqdn,
-		"ipv6_hostname", "ipv6." + s.Fqdn,
-		"snapshots", collectById(s.Snapshots),
-		"server_groups", collectById(s.ServerGroups),
-	})
+	if err = out.Write(ServerFields(*s)); err != nil {
+		return err
+	}
+	out.Flush()
 	return nil
 
 }
@@ -177,14 +194,14 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	w := tabWriter()
-	defer w.Flush()
-	listRec(w, "ID", "STATUS", "TYPE", "ZONE", "CREATED", "IMAGE", "CLOUDIPS", "NAME")
-	s := server
-	listRec(
-		w, s.Id, s.Status, s.ServerType.Handle,
-		s.Zone.Handle, s.CreatedAt.Format("2006-01-02"),
-		s.Image.Id, collectById(s.CloudIPs), s.Name)
+
+	out := new(ShowFieldOutput)
+	out.Setup(strings.Split(l.Fields, ","))
+
+	if err = out.Write(ServerFields(*server)); err != nil {
+		return err
+	}
+	out.Flush()
 	return nil
 
 }
@@ -237,9 +254,10 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 		return fmt.Errorf("User data cannot exceed 16k")
 	}
 
-	w := tabWriter()
-	defer w.Flush()
-	listRec(w, "ID", "STATUS", "TYPE", "ZONE", "CREATED", "IMAGE", "CLOUDIPS", "NAME")
+	out := new(RowFieldOutput)
+	out.Setup(strings.Split(l.Fields, ","))
+	out.SendHeader()
+
 	returnError := false
 	for _, id := range l.IdList {
 
@@ -254,11 +272,11 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 			returnError = true
 			continue
 		}
-		listRec(
-			w, server.Id, server.Status, server.ServerType.Handle,
-			server.Zone.Handle, server.CreatedAt.Format("2006-01-02"),
-			server.Image.Id, collectById(server.CloudIPs), server.Name)
+		if server != nil {
+			out.Write(ServerFields(*server))
+		}
 	}
+	out.Flush()
 	if returnError {
 		return genericError
 	}
@@ -503,14 +521,21 @@ func ConfigureServersCommand(app *CliApp) {
 		Default().Action(cmd.list)
 	list.Flag("groups", "List only servers belonging to these groups").
 		Short('g').SetValue(&pStringValue{&cmd.Groups})
-
+	list.Flag("fields", "Which fields to display").
+		Default(DefaultServerListFields).
+		StringVar(&cmd.Fields)
 	show := servers.Command("show", "View details on a cloud server").
 		Action(cmd.show)
 	show.Arg("identifier", "Identifier of server to show").
 		Required().StringVar(&cmd.Id)
-
+	show.Flag("fields", "Which fields to display").
+		Default(DefaultServerShowFields).
+		StringVar(&cmd.Fields)
 	create := servers.Command("create", "Create a new cloud server").
 		Action(cmd.create)
+	create.Flag("fields", "Which fields to display").
+		Default(DefaultServerShowFields).
+		StringVar(&cmd.Fields)
 	create.Arg("image identifier", "Identifier of image with which to create the server").
 		Required().StringVar(&cmd.ImageId)
 	create.Flag("name", "Name to give the new server").
@@ -532,6 +557,9 @@ func ConfigureServersCommand(app *CliApp) {
 		Action(cmd.update)
 	update.Arg("identifier", "Identifier of servers to update").
 		Required().StringsVar(&cmd.IdList)
+	update.Flag("fields", "Which fields to display").
+		Default(DefaultServerListFields).
+		StringVar(&cmd.Fields)
 	update.Flag("name", "Set a new name for the server").
 		Short('n').SetValue(&pStringValue{&cmd.Name})
 	update.Flag("groups", "Specify the groups to which the server should belong. Comma separate multiple groups.").
