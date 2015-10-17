@@ -5,6 +5,12 @@ import (
 	"github.com/brightbox/gobrightbox"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sort"
+	"strings"
+)
+
+const (
+	DefaultImageListFields = "id,owner,type,created,status,arch,name"
+	DefaultImageShowFields = "id,type,owner,created_at,status,locked,arch,name,description,username,virtual_size,disk_size,public,compatibility_mode,official,ancestor_id,license_name"
 )
 
 type ImagesCommand struct {
@@ -12,6 +18,50 @@ type ImagesCommand struct {
 	Id      string
 	IdList  []string
 	ShowAll bool
+	Fields  string
+}
+
+func ImageFields(i *brightbox.Image) map[string]string {
+	owner := i.Owner
+	itype := i.SourceType
+	if i.Official {
+		owner = "brightbox"
+		itype = "official"
+	}
+	name := i.Name
+	if i.CompatibilityMode {
+		name += " (compat)"
+	}
+	name += " (" + i.Arch + ")"
+	var status string
+	if i.Status != "available" {
+		status = i.Status
+	} else if i.Public {
+		status = "public"
+	} else {
+		status = "private"
+	}
+
+	return map[string]string{
+		"id":                 i.Id,
+		"type":               itype,
+		"owner":              owner,
+		"created":            i.CreatedAt.Format("2006-01-02"),
+		"created_at":         formatTime(&i.CreatedAt),
+		"status":             status,
+		"locked":             formatBool(i.Locked),
+		"arch":               i.Arch,
+		"name":               i.Name,
+		"description":        i.Description,
+		"username":           i.Username,
+		"virtual_size":       formatInt(i.VirtualSize),
+		"disk_size":          formatInt(i.DiskSize),
+		"public":             formatBool(i.Public),
+		"compatibility_mode": formatBool(i.CompatibilityMode),
+		"official":           formatBool(i.Official),
+		"ancestor_id":        i.AncestorId,
+		"license_name":       i.LicenseName,
+	}
 }
 
 type imagesForDisplay []brightbox.Image
@@ -65,8 +115,8 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 		achan <- l.accountId()
 	}()
 
-	w := tabWriter()
-	defer w.Flush()
+	out := new(RowFieldOutput)
+	out.Setup(strings.Split(l.Fields, ","))
 
 	images, err := l.Client.Images()
 	if err != nil {
@@ -79,38 +129,18 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 	sort.Sort(sortedImages)
 
 	accountId := <-achan
-
-	listRec(w, "ID", "OWNER", "TYPE", "CREATED", "STATUS", "SIZE", "NAME")
+	out.SendHeader()
 	for _, i := range sortedImages {
-		owner := i.Owner
-		itype := i.SourceType
-		if i.Official {
-			owner = "brightbox"
-			itype = "official"
-		}
-		name := i.Name
-		if i.CompatibilityMode {
-			name += " (compat)"
-		}
-		name += " (" + i.Arch + ")"
-		var status string
-		if i.Status != "available" {
-			status = i.Status
-		} else if i.Public {
-			status = "public"
-		} else {
-			status = "private"
-		}
 		if l.ShowAll == false {
 			if !i.Official && i.Owner != accountId {
 				continue
 			}
 		}
-		listRec(
-			w, i.Id, owner, itype,
-			i.CreatedAt.Format("2006-01-02"),
-			status, i.VirtualSize, name)
+		if err = out.Write(ImageFields(&i)); err != nil {
+			return err
+		}
 	}
+	out.Flush()
 	return nil
 }
 
@@ -120,38 +150,17 @@ func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	w := tabWriterRight()
-	defer w.Flush()
-	s, err := l.Client.Image(l.Id)
+	out := new(ShowFieldOutput)
+	out.Setup(strings.Split(l.Fields, ","))
+
+	i, err := l.Client.Image(l.Id)
 	if err != nil {
 		l.Fatalf(err.Error())
 	}
-
-	owner := s.Owner
-	itype := s.SourceType
-	if s.Official {
-		owner = "brightbox"
-		itype = "official"
+	if err = out.Write(ImageFields(i)); err != nil {
+		return err
 	}
-	drawShow(w, []interface{}{
-		"id", s.Id,
-		"type", itype,
-		"owner", owner,
-		"created_at", s.CreatedAt,
-		"status", s.Status,
-		"locked", s.Locked,
-		"arch", s.Arch,
-		"name", s.Name,
-		"description", s.Description,
-		"username", s.Username,
-		"virtual_size", s.VirtualSize,
-		"disk_size", s.DiskSize,
-		"public", s.Public,
-		"compatibility_mode", s.CompatibilityMode,
-		"official", s.Official,
-		"ancestor_id", s.AncestorId,
-		"license_name", s.LicenseName,
-	})
+	out.Flush()
 	return nil
 
 }
@@ -180,8 +189,14 @@ func ConfigureImagesCommand(app *CliApp) {
 	cmd := ImagesCommand{CliApp: app}
 	images := app.Command("images", "Manage server images")
 	list := images.Command("list", "List server images").Default().Action(cmd.list)
+	list.Flag("fields", "Which fields to display").
+		Default(DefaultImageListFields).
+		StringVar(&cmd.Fields)
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)
 	show := images.Command("show", "View details of a server image").Action(cmd.show)
+	show.Flag("fields", "Which fields to display").
+		Default(DefaultImageShowFields).
+		StringVar(&cmd.Fields)
 	show.Arg("identifier", "Identifier of image to show").Required().StringVar(&cmd.Id)
 	destroy := images.Command("destroy", "Destroy a server image").Action(cmd.destroy)
 	destroy.Arg("identifier", "Identifier of image to destroy").Required().StringsVar(&cmd.IdList)
