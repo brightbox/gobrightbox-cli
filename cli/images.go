@@ -8,9 +8,11 @@ import (
 	"strings"
 )
 
-const (
-	DefaultImageListFields = "id,owner,type,created,status,arch,name"
-	DefaultImageShowFields = "id,type,owner,created_at,status,locked,arch,name,description,username,virtual_size,disk_size,public,compatibility_mode,official,ancestor_id,license_name"
+var (
+	DefaultImageListFields = []string{"id", "owner", "type", "created", "status", "arch", "name"}
+	DefaultImageShowFields = []string{"id", "type", "owner", "created_at", "status", "locked", "arch",
+		"name", "description", "username", "virtual_size", "disk_size", "public", "compatibility_mode",
+		"official", "ancestor_id", "license_name"}
 )
 
 type ImagesCommand struct {
@@ -190,12 +192,12 @@ func ConfigureImagesCommand(app *CliApp) {
 	images := app.Command("images", "Manage server images")
 	list := images.Command("list", "List server images").Default().Action(cmd.list)
 	list.Flag("fields", "Which fields to display").
-		Default(DefaultImageListFields).
+		Default(strings.Join(DefaultImageListFields, ",")).
 		StringVar(&cmd.Fields)
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)
 	show := images.Command("show", "View details of a server image").Action(cmd.show)
 	show.Flag("fields", "Which fields to display").
-		Default(DefaultImageShowFields).
+		Default(strings.Join(DefaultImageShowFields,",")).
 		StringVar(&cmd.Fields)
 	show.Arg("identifier", "Identifier of image to show").Required().StringVar(&cmd.Id)
 	destroy := images.Command("destroy", "Destroy a server image").Action(cmd.destroy)

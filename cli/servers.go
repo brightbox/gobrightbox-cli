@@ -10,9 +10,12 @@ import (
 	"strings"
 )
 
-const (
-	DefaultServerListFields = "id,status,type,zone,created,image,cloud_ips,name"
-	DefaultServerShowFields = "id,status,locked,name,created_at,deleted_at,zone,type,type_name,type,ram,cores,disk,compatibility_mode,image,image_name,arch,private_ips,cloud_ips,ipv6_ips,cloud_ips,hostname,fqdn,public_hostname,ipv6_hostname,snapshots,server_groups"
+var (
+	DefaultServerListFields = []string{"id", "status", "type", "zone", "created", "image", "cloud_ips", "name"}
+	DefaultServerShowFields = []string{"id", "status", "locked", "name", "created_at", "deleted_at", "zone",
+		"type", "type_name", "type", "ram", "cores", "disk", "compatibility_mode", "image", "image_name",
+		"arch", "private_ips", "cloud_ips", "ipv6_ips", "cloud_ips", "hostname", "fqdn", "public_hostname",
+		"ipv6_hostname", "snapshots", "server_groups"}
 )
 
 type ServersCommand struct {
@@ -522,19 +525,19 @@ func ConfigureServersCommand(app *CliApp) {
 	list.Flag("groups", "List only servers belonging to these groups").
 		Short('g').SetValue(&pStringValue{&cmd.Groups})
 	list.Flag("fields", "Which fields to display").
-		Default(DefaultServerListFields).
+		Default(strings.Join(DefaultServerListFields, ",")).
 		StringVar(&cmd.Fields)
 	show := servers.Command("show", "View details on a cloud server").
 		Action(cmd.show)
 	show.Arg("identifier", "Identifier of server to show").
 		Required().StringVar(&cmd.Id)
 	show.Flag("fields", "Which fields to display").
-		Default(DefaultServerShowFields).
+		Default(strings.Join(DefaultServerShowFields, ",")).
 		StringVar(&cmd.Fields)
 	create := servers.Command("create", "Create a new cloud server").
 		Action(cmd.create)
 	create.Flag("fields", "Which fields to display").
-		Default(DefaultServerShowFields).
+		Default(strings.Join(DefaultServerShowFields, ",")).
 		StringVar(&cmd.Fields)
 	create.Arg("image identifier", "Identifier of image with which to create the server").
 		Required().StringVar(&cmd.ImageId)
@@ -558,7 +561,7 @@ func ConfigureServersCommand(app *CliApp) {
 	update.Arg("identifier", "Identifier of servers to update").
 		Required().StringsVar(&cmd.IdList)
 	update.Flag("fields", "Which fields to display").
-		Default(DefaultServerListFields).
+		Default(strings.Join(DefaultServerListFields, ",")).
 		StringVar(&cmd.Fields)
 	update.Flag("name", "Set a new name for the server").
 		Short('n').SetValue(&pStringValue{&cmd.Name})
