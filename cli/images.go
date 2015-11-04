@@ -124,8 +124,8 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	sortedImages := make(imagesForDisplay, 0, len(*images))
-	for _, i := range *images {
+	sortedImages := make(imagesForDisplay, 0, len(images))
+	for _, i := range images {
 		sortedImages = append(sortedImages, i)
 	}
 	sort.Sort(sortedImages)

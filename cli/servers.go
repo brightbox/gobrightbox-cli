@@ -87,7 +87,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 	out.Setup(strings.Split(l.Fields, ","))
 
 	out.SendHeader()
-	for _, s := range *servers {
+	for _, s := range servers {
 		if len(groupFilter) > 0 {
 			matches := 0
 			for _, gf := range groupFilter {

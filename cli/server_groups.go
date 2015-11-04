@@ -28,7 +28,7 @@ func (l *ServerGroupsCommand) list(pc *kingpin.ParseContext) error {
 	w := tabWriter()
 	defer w.Flush()
 	listRec(w, "ID", "SERVER_COUNT", "FWPOLICY", "NAME")
-	for _, s := range *groups {
+	for _, s := range groups {
 		listRec(
 			w, s.Id, len(s.Servers), s.FirewallPolicy.Id, s.Name)
 	}

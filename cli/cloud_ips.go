@@ -88,7 +88,7 @@ func (l *CloudIPsCommand) list(pc *kingpin.ParseContext) error {
 	if err != nil {
 		return err
 	}
-	for _, cip := range *cips {
+	for _, cip := range cips {
 		if err = out.Write(CloudIPFields(&cip)); err != nil {
 			return err
 		}

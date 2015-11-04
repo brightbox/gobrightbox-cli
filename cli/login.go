@@ -104,11 +104,11 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 		if err != nil {
 			l.Errorf("Couldn't choose a default account: %s", err)
 		}
-		if len(*accounts) == 0 {
+		if len(accounts) == 0 {
 			l.Errorf("No accounts available to choose a default account")
 		}
 		var da brightbox.Account
-		for _, a := range *accounts {
+		for _, a := range accounts {
 			if a.Status == "active" {
 				if da.Id == "" {
 					da = a

@@ -70,15 +70,15 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 	// collaborations. If it fails, we're an api client and don't have
 	// collaborations.
 	if err == nil {
-		for _, a := range *accounts {
+		for _, a := range accounts {
 			colmap[a.Id] = "Owner"
 		}
-		for _, col := range *collabs {
+		for _, col := range collabs {
 			colmap[col.Account.Id] = col.RoleLabel
 		}
 	}
 
-	for _, a := range *accounts {
+	for _, a := range accounts {
 		if err = out.Write(AccountFields(Account{&a, colmap[a.Id]})); err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
 	colmap := make(map[string]string)
 	if err == nil {
 		colmap[account.Id] = "Owner"
-		for _, col := range *collabs {
+		for _, col := range collabs {
 			colmap[col.Account.Id] = col.RoleLabel
 		}
 	}
