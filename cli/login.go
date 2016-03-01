@@ -26,34 +26,55 @@ func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 	}
 
 	var client *Client
-	clientName := l.Email
-	if l.ClientName == "" {
-		client, _ = l.Config.Client(clientName)
-	} else {
-		client, err = l.Config.Client(clientName)
+	username := ""
+	clientname := ""
+
+	if l.ClientName != "" {
+		clientname = client.ClientName
+		client, err = l.Config.Client(clientname)
 		if err != nil {
-			l.Fatalf("Couldn't find client config %s: %s", clientName, err)
+			l.Fatalf("Couldn't find client config %s: %s", clientname, err)
+		}
+		username = client.Username
+	}
+
+	if l.Email != "" {
+		username = l.Email
+		if client == nil {
+			clientname = username
+			if strings.Contains(username, "/") {
+				toks := strings.SplitN(username, "/", 2)
+				username = toks[0]
+			}
+			client, _ = l.Config.Client(clientname)
+			if client == nil {
+				client = &Client{
+					ClientName: clientname,
+					Username: username,
+				}
+			}
 		}
 	}
 
-	if l.Email == "" && client != nil {
-		l.Email = client.Username
+	if client == nil {
+		client = l.Config.DefaultClient()
+		if client != nil	{
+			username = client.Username
+			clientname = client.ClientName
+		}
+	}
+	
+	if client == nil {
+		client = &Client{
+			Username: username,
+			ClientName: clientname,
+		}
 	}
 
-	if l.Email == "" {
+	if username == "" {
 		l.Fatalf("required argument 'email address' not provided")
 	}
 
-	if client == nil {
-		client = new(Client)
-	}
-
-	email := l.Email
-	if strings.Contains(email, "/") {
-		toks := strings.SplitN(email, "/", 2)
-		email = toks[0]
-	}
-	client.ClientName = clientName
 	if l.ClientId != "" {
 		client.ClientID = l.ClientId
 	}
@@ -71,9 +92,6 @@ func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 	}
 	if client.AuthUrl == "" && l.ApiUrl != "" {
 		client.ApiUrl = l.ApiUrl
-	}
-	if l.Email != "" {
-		client.Username = email
 	}
 	if l.DefaultAccount != "" {
 		client.DefaultAccount = l.DefaultAccount
