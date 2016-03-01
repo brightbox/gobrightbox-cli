@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-type LoginCommand struct {
-	*CliApp
+type loginCommand struct {
+	*CLIApp
 	Email          string
 	ApiUrl         string
 	AuthUrl        string
@@ -19,7 +19,7 @@ type LoginCommand struct {
 	DefaultAccount string
 }
 
-func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
+func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 			client.DefaultAccount = da.Id
 		}
 	}
-	err = l.Config.SaveClientConfig(client)
+	err = l.Config.saveClientConfig(client)
 	if err != nil {
 		l.Fatalf("Couldn't save client config %s: %s", client.ClientName, err)
 	}
@@ -135,8 +135,8 @@ func (l *LoginCommand) login(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func ConfigureLoginCommand(app *CliApp) {
-	cmd := LoginCommand{CliApp: app}
+func configureLoginCommand(app *CLIApp) {
+	cmd := loginCommand{CLIApp: app}
 	login := app.Command("login", "Authenticate with user credentials").Action(cmd.login)
 	login.Arg("email address", "Your user's email address").
 		StringVar(&cmd.Email)

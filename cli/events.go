@@ -10,51 +10,51 @@ import (
 	"strings"
 )
 
-type EventsCommand struct {
-	*CliApp
+type eventsCommand struct {
+	*CLIApp
 	Id     string
 	Format string
 }
 
-type FayeAdvice struct {
+type fayeAdvice struct {
 	Timeout int
 }
-type FayeAuth struct {
+type fayeAuth struct {
 	AuthToken string `json:"auth_token"`
 }
-type FayeMsg struct {
+type fayeMsg struct {
 	Channel                  string           `json:"channel,omitempty"`
 	ClientId                 string           `json:"clientId,omitempty"`
 	ConnectionType           string           `json:"connectionType,omitempty"`
 	Id                       string           `json:"id,omitempty"`
 	Subscription             string           `json:"subscription,omitempty"`
-	Ext                      *FayeAuth        `json:"ext,omitempty"`
+	Ext                      *fayeAuth        `json:"ext,omitempty"`
 	Version                  string           `json:"version,omitempty"`
 	SupportedConnectionTypes []string         `json:"supportedConnectionTypes,omitempty"`
 	Successful               bool             `json:"successful,omitempty"`
 	Error                    string           `json:"error,omitempty"`
 	Data                     *json.RawMessage `json:"data,omitempty"`
-	Advice                   *FayeAdvice      `json:"advice,omitempty"`
+	Advice                   *fayeAdvice      `json:"advice,omitempty"`
 }
 
-type EventResource struct {
+type eventResource struct {
 	Id    string
 	Name  string
 	Email *string
 }
-type Event struct {
+type event struct {
 	Id       string
 	Action   string
 	State    string
-	Resource EventResource
-	Account  EventResource
-	Affects  []EventResource
-	Touches  []EventResource
-	User     EventResource
-	Client   EventResource
+	Resource eventResource
+	Account  eventResource
+	Affects  []eventResource
+	Touches  []eventResource
+	User     eventResource
+	Client   eventResource
 }
 
-func sendmsg(ws *websocket.Conn, msgs ...*FayeMsg) error {
+func sendmsg(ws *websocket.Conn, msgs ...*fayeMsg) error {
 	jmsg, err := json.Marshal(msgs)
 	if err != nil {
 		return err
@@ -64,12 +64,12 @@ func sendmsg(ws *websocket.Conn, msgs ...*FayeMsg) error {
 	}
 	return nil
 }
-func recvmsg(ws *websocket.Conn) ([]FayeMsg, error) {
+func recvmsg(ws *websocket.Conn) ([]fayeMsg, error) {
 	_, jmsg, err := ws.ReadMessage()
 	if err != nil {
 		return nil, err
 	}
-	msgl := make([]FayeMsg, 1)
+	msgl := make([]fayeMsg, 1)
 	err = json.Unmarshal(jmsg, &msgl)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func recvmsg(ws *websocket.Conn) ([]FayeMsg, error) {
 	return msgl, nil
 }
 
-func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
+func (l *eventsCommand) watch(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 		return err
 	}
 
-	handshake := FayeMsg{
+	handshake := fayeMsg{
 		Channel:                  "/meta/handshake",
 		Version:                  "1.0",
 		SupportedConnectionTypes: []string{"long-polling", "websocket"},
@@ -116,16 +116,16 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 
 	err = sendmsg(ws, nil)
 
-	connect := FayeMsg{
+	connect := fayeMsg{
 		Channel:        "/meta/connect",
 		ClientId:       cid,
 		ConnectionType: "websocket",
 	}
-	subscribe := FayeMsg{
+	subscribe := fayeMsg{
 		Channel:      "/meta/subscribe",
 		ClientId:     cid,
 		Subscription: "/account/" + l.accountId(),
-		Ext:          &FayeAuth{AuthToken: token.AccessToken},
+		Ext:          &fayeAuth{AuthToken: token.AccessToken},
 	}
 	err = sendmsg(ws, &connect, &subscribe)
 	if err != nil {
@@ -142,7 +142,7 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 		}
 		for _, msg := range msgl {
 			if msg.Data != nil && strings.HasPrefix(msg.Channel, "/account/acc") {
-				e := Event{}
+				e := event{}
 				err = json.Unmarshal(*msg.Data, &e)
 				if err != nil {
 					log.Println(err)
@@ -188,8 +188,8 @@ func (l *EventsCommand) watch(pc *kingpin.ParseContext) error {
 	}
 }
 
-func ConfigureEventsCommand(app *CliApp) {
-	cmd := EventsCommand{CliApp: app}
+func configureEventsCommand(app *CLIApp) {
+	cmd := eventsCommand{CLIApp: app}
 	events := app.Command("events", "view event stream")
 	events.Command("watch", "listen for events and output them").Action(cmd.watch)
 }

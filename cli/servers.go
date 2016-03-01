@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	DefaultServerListFields = []string{"id", "status", "type", "zone", "created", "image", "cloud_ips", "name"}
-	DefaultServerShowFields = []string{"id", "status", "locked", "name", "created_at", "deleted_at", "zone",
+	defaultServerListFields = []string{"id", "status", "type", "zone", "created", "image", "cloud_ips", "name"}
+	defaultServerShowFields = []string{"id", "status", "locked", "name", "created_at", "deleted_at", "zone",
 		"type", "type_name", "type", "ram", "cores", "disk", "compatibility_mode", "image", "image_name",
 		"arch", "private_ips", "cloud_ips", "ipv6_ips", "cloud_ips", "hostname", "fqdn", "public_hostname",
 		"ipv6_hostname", "snapshots", "server_groups"}
 )
 
-type ServersCommand struct {
-	*CliApp
+type serversCommand struct {
+	*CLIApp
 	All               bool
 	Id                string
 	IdList            []string
@@ -35,7 +35,7 @@ type ServersCommand struct {
 	Fields            string
 }
 
-func ServerFields(s brightbox.Server) map[string]string {
+func serverFields(s brightbox.Server) map[string]string {
 	return map[string]string{
 		"id":                 s.Id,
 		"status":             s.Status,
@@ -69,7 +69,7 @@ func ServerFields(s brightbox.Server) map[string]string {
 	}
 }
 
-func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
+func (l *serversCommand) list(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 			for _, gf := range groupFilter {
 				for _, g := range s.ServerGroups {
 					if g.Id == gf {
-						matches += 1
+						matches++
 					}
 				}
 			}
@@ -101,7 +101,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 				continue
 			}
 		}
-		if err = out.Write(ServerFields(s)); err != nil {
+		if err = out.Write(serverFields(s)); err != nil {
 			return err
 		}
 
@@ -110,7 +110,7 @@ func (l *ServersCommand) list(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
+func (l *serversCommand) show(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 	out := new(ShowFieldOutput)
 	out.Setup(strings.Split(l.Fields, ","))
 
-	if err = out.Write(ServerFields(*s)); err != nil {
+	if err = out.Write(serverFields(*s)); err != nil {
 		return err
 	}
 	out.Flush()
@@ -130,7 +130,7 @@ func (l *ServersCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
+func (l *serversCommand) create(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -141,19 +141,19 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 	}
 
 	if l.Zone != "" {
-		zoneId, err := l.Client.resolveZoneId(l.Zone)
+		zoneID, err := l.Client.resolveZoneId(l.Zone)
 		if err != nil {
 			return err
 		}
-		newServer.Zone = zoneId
+		newServer.Zone = zoneID
 	}
 
 	if l.ServerType != "" {
-		typeId, err := l.Client.resolveServerTypeId(l.ServerType)
+		typeID, err := l.Client.resolveServerTypeId(l.ServerType)
 		if err != nil {
 			return err
 		}
-		newServer.ServerType = typeId
+		newServer.ServerType = typeID
 	}
 
 	if l.Groups != nil {
@@ -201,7 +201,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 	out := new(ShowFieldOutput)
 	out.Setup(strings.Split(l.Fields, ","))
 
-	if err = out.Write(ServerFields(*server)); err != nil {
+	if err = out.Write(serverFields(*server)); err != nil {
 		return err
 	}
 	out.Flush()
@@ -209,7 +209,7 @@ func (l *ServersCommand) create(pc *kingpin.ParseContext) error {
 
 }
 
-func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
+func (l *serversCommand) update(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -276,17 +276,17 @@ func (l *ServersCommand) update(pc *kingpin.ParseContext) error {
 			continue
 		}
 		if server != nil {
-			out.Write(ServerFields(*server))
+			out.Write(serverFields(*server))
 		}
 	}
 	out.Flush()
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
+func (l *serversCommand) destroy(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -301,12 +301,12 @@ func (l *ServersCommand) destroy(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
+func (l *serversCommand) stop(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -324,12 +324,12 @@ func (l *ServersCommand) stop(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
+func (l *serversCommand) start(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -347,12 +347,12 @@ func (l *ServersCommand) start(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
+func (l *serversCommand) reboot(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -370,12 +370,12 @@ func (l *ServersCommand) reboot(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
+func (l *serversCommand) reset(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -393,12 +393,12 @@ func (l *ServersCommand) reset(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
+func (l *serversCommand) shutdown(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -416,12 +416,12 @@ func (l *ServersCommand) shutdown(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
+func (l *serversCommand) lock(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -439,12 +439,12 @@ func (l *ServersCommand) lock(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
+func (l *serversCommand) unlock(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -462,12 +462,12 @@ func (l *ServersCommand) unlock(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
+func (l *serversCommand) snapshot(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -487,12 +487,12 @@ func (l *ServersCommand) snapshot(pc *kingpin.ParseContext) error {
 		fmt.Printf("Snapsnot image %s started from server %s\n", img.Id, id)
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
+func (l *serversCommand) activateConsole(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -512,32 +512,32 @@ func (l *ServersCommand) activateConsole(pc *kingpin.ParseContext) error {
 		fmt.Printf("Console activated for server %s: %s\n", id, srv.FullConsoleUrl())
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func ConfigureServersCommand(app *CliApp) {
-	cmd := ServersCommand{CliApp: app}
+func configureServersCommand(app *CLIApp) {
+	cmd := serversCommand{CLIApp: app}
 	servers := app.Command("servers", "Manage cloud servers")
 	list := servers.Command("list", "List cloud servers").
 		Default().Action(cmd.list)
 	list.Flag("groups", "List only servers belonging to these groups").
 		Short('g').SetValue(&pStringValue{&cmd.Groups})
 	list.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultServerListFields, ",")).
+		Default(strings.Join(defaultServerListFields, ",")).
 		StringVar(&cmd.Fields)
 	show := servers.Command("show", "View details on a cloud server").
 		Action(cmd.show)
 	show.Arg("identifier", "Identifier of server to show").
 		Required().StringVar(&cmd.Id)
 	show.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultServerShowFields, ",")).
+		Default(strings.Join(defaultServerShowFields, ",")).
 		StringVar(&cmd.Fields)
 	create := servers.Command("create", "Create a new cloud server").
 		Action(cmd.create)
 	create.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultServerShowFields, ",")).
+		Default(strings.Join(defaultServerShowFields, ",")).
 		StringVar(&cmd.Fields)
 	create.Arg("image identifier", "Identifier of image with which to create the server").
 		Required().StringVar(&cmd.ImageId)
@@ -561,7 +561,7 @@ func ConfigureServersCommand(app *CliApp) {
 	update.Arg("identifier", "Identifier of servers to update").
 		Required().StringsVar(&cmd.IdList)
 	update.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultServerListFields, ",")).
+		Default(strings.Join(defaultServerListFields, ",")).
 		StringVar(&cmd.Fields)
 	update.Flag("name", "Set a new name for the server").
 		Short('n').SetValue(&pStringValue{&cmd.Name})

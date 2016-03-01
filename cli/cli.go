@@ -7,37 +7,39 @@ import (
 )
 
 var (
-	genericError = errors.New("Errors were encountered")
+	errGeneric = errors.New("Errors were encountered")
 )
 
-type CliApp struct {
+// CLIApp represents a cli application instance
+type CLIApp struct {
 	*kingpin.Application
 	ClientName string
 	AccountId  string
-	Config     *Config
+	Config     *config
 	Client     *Client
 }
 
-func New() *CliApp {
-	a := new(CliApp)
+// New initializes the brightbox cli application
+func New() *CLIApp {
+	a := new(CLIApp)
 	a.Application = kingpin.New("brightbox", "Bleh")
 	a.Flag("client", "client to authenticate with.").OverrideDefaultFromEnvar("CLIENT").StringVar(&a.ClientName)
 	a.Flag("account", "id of account to limit queries to").OverrideDefaultFromEnvar("ACCOUNT").StringVar(&a.AccountId)
 
-	ConfigureServersCommand(a)
-	ConfigureConfigCommand(a)
-	ConfigureAccountsCommand(a)
-	ConfigureServerGroupsCommand(a)
-	ConfigureTokenCommand(a)
-	ConfigureImagesCommand(a)
-	ConfigureCloudIPsCommand(a)
-	ConfigureEventsCommand(a)
-	ConfigureLoginCommand(a)
+	configureServersCommand(a)
+	configureConfigCommand(a)
+	configureAccountsCommand(a)
+	configureServerGroupsCommand(a)
+	configureTokenCommand(a)
+	configureImagesCommand(a)
+	configureCloudIPsCommand(a)
+	configureEventsCommand(a)
+	configureLoginCommand(a)
 	return a
 }
 
-func (c *CliApp) Configure() error {
-	cfg, err := NewConfig()
+func (c *CLIApp) Configure() error {
+	cfg, err := newConfig()
 	if err != nil {
 		return err
 	}
@@ -50,7 +52,7 @@ func (c *CliApp) Configure() error {
 	if clientName == "" {
 		return nil
 	}
-	err = cfg.SetClient(clientName)
+	err = cfg.setClient(clientName)
 	if err != nil {
 		return err
 	}
@@ -64,7 +66,7 @@ func (c *CliApp) Configure() error {
 
 // Try to get an account id for the connection, either as specified in the
 // config or by looking up the api client id
-func (c *CliApp) accountId() string {
+func (c *CLIApp) accountId() string {
 	if c.AccountId != "" {
 		return c.AccountId
 	}

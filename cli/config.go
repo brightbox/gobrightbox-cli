@@ -12,15 +12,15 @@ var (
 	xdgapp = xdg.App{Name: "brightbox"}
 )
 
-type Config struct {
+type config struct {
 	App               *kingpin.Application
 	defaultClientName string
 	currentClient     *Client
 	clients           map[string]Client
 }
 
-func NewConfig() (*Config, error) {
-	c := new(Config)
+func newConfig() (*config, error) {
+	c := new(config)
 	err := c.Setup()
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewConfig() (*Config, error) {
 	return c, nil
 }
 
-func (c *Config) SaveClientConfig(client *Client) error {
+func (c *config) saveClientConfig(client *Client) error {
 	if client == nil {
 		panic("Can't save client config for nil client")
 	}
@@ -55,19 +55,19 @@ func (c *Config) SaveClientConfig(client *Client) error {
 	return nil
 }
 
-func (c *Config) Client(cname string) (*Client, error) {
+func (c *config) Client(cname string) (*Client, error) {
 	client, exists := c.clients[cname]
 	if exists == false {
-		return nil, fmt.Errorf("client '%s' not found in config.", cname)
+		return nil, fmt.Errorf("client '%s' not found in config", cname)
 	}
 	return &client, nil
 }
 
-func (c *Config) CurrentClient() *Client {
+func (c *config) CurrentClient() *Client {
 	return c.currentClient
 }
 
-func (c *Config) DefaultClient() *Client {
+func (c *config) DefaultClient() *Client {
 	client, err := c.Client(c.defaultClientName)
 	if err != nil && client == nil {
 		return nil
@@ -75,7 +75,7 @@ func (c *Config) DefaultClient() *Client {
 	return client
 }
 
-func (c *Config) Setup() error {
+func (c *config) Setup() error {
 	err := os.MkdirAll(xdgapp.ConfigPath(""), 0750)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (c *Config) Setup() error {
 	return nil
 }
 
-func (c *Config) Read() error {
+func (c *config) Read() error {
 	filename := xdgapp.ConfigPath("config")
 	cfg, err := ini.Load(filename)
 	if os.IsNotExist(err) {
@@ -127,7 +127,7 @@ func (c *Config) Read() error {
 
 }
 
-func (c *Config) Write() error {
+func (c *config) Write() error {
 	filename := xdgapp.ConfigPath("config")
 	cfg, err := ini.Load(filename)
 	if os.IsNotExist(err) {
@@ -146,7 +146,7 @@ func (c *Config) Write() error {
 	return nil
 }
 
-func (c *Config) SetClient(clientName string) error {
+func (c *config) setClient(clientName string) error {
 	if clientName == "" {
 		c.currentClient = c.DefaultClient()
 		return nil
@@ -156,12 +156,12 @@ func (c *Config) SetClient(clientName string) error {
 		c.currentClient = client
 		return nil
 	} else {
-		return fmt.Errorf("client '%s' not found in config.", clientName)
+		return fmt.Errorf("client '%s' not found in config", clientName)
 	}
 }
 
-type ConfigCommand struct {
-	*CliApp
+type configCommand struct {
+	*CLIApp
 	Id      string
 	Secret  string
 	ApiUrl  string
@@ -169,8 +169,8 @@ type ConfigCommand struct {
 	Name    string
 }
 
-func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfig()
+func (l *configCommand) list(pc *kingpin.ParseContext) error {
+	cfg, err := newConfig()
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (l *ConfigCommand) list(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *ConfigCommand) add(pc *kingpin.ParseContext) error {
+func (l *configCommand) add(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -209,7 +209,7 @@ func (l *ConfigCommand) add(pc *kingpin.ParseContext) error {
 		client.AuthUrl = l.ApiUrl
 	}
 
-	err = l.Config.SaveClientConfig(client)
+	err = l.Config.saveClientConfig(client)
 	if err != nil {
 		l.Fatalf("Couldn't save client config %s: %s", client.ClientName, err)
 	}
@@ -220,7 +220,7 @@ func (l *ConfigCommand) add(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *ConfigCommand) dflt(pc *kingpin.ParseContext) error {
+func (l *configCommand) dflt(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -228,7 +228,7 @@ func (l *ConfigCommand) dflt(pc *kingpin.ParseContext) error {
 
 	client, err := l.Config.Client(l.Name)
 	if client == nil || err != nil {
-		l.Fatalf("client '%s' not found in config.", l.Name)
+		l.Fatalf("client '%s' not found in config", l.Name)
 	}
 
 	l.Config.defaultClientName = l.Name
@@ -236,8 +236,8 @@ func (l *ConfigCommand) dflt(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
-	cfg, err := NewConfig()
+func (l *configCommand) show(pc *kingpin.ParseContext) error {
+	cfg, err := newConfig()
 	if err != nil {
 		return err
 	}
@@ -262,8 +262,8 @@ func (l *ConfigCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func ConfigureConfigCommand(app *CliApp) {
-	c := &ConfigCommand{CliApp: app}
+func configureConfigCommand(app *CLIApp) {
+	c := &configCommand{CLIApp: app}
 	cmd := app.Command("config", "manage cli configuration")
 	clients := cmd.Command("clients", "manage clients in local config")
 

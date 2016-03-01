@@ -7,24 +7,24 @@ import (
 )
 
 var (
-	DefaultAccountListFields = []string{"id", "status", "role", "ram_used", "lb_used", "dbs_ram_used", "name"}
-	DefaultAccountShowFields = []string{"id", "name", "status", "role", "cloud_ips_limit",
+	defaultAccountListFields = []string{"id", "status", "role", "ram_used", "lb_used", "dbs_ram_used", "name"}
+	defaultAccountShowFields = []string{"id", "name", "status", "role", "cloud_ips_limit",
 		"cloud_ips_used", "ram_limit", "ram_used", "lb_limit", "lb_used",
 		"dbs_ram_limit", "dbs_ram_used", "library_ftp_host", "library_ftp_user"}
 )
 
-type Account struct {
+type account struct {
 	*brightbox.Account
 	Role string
 }
 
-type AccountsCommand struct {
-	*CliApp
+type accountsCommand struct {
+	*CLIApp
 	Id     string
 	Fields string
 }
 
-func AccountFields(a Account) map[string]string {
+func accountFields(a account) map[string]string {
 	return map[string]string{
 		"id":                   a.Id,
 		"status":               a.Status,
@@ -48,7 +48,7 @@ func AccountFields(a Account) map[string]string {
 	}
 }
 
-func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
+func (l *accountsCommand) list(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 	}
 
 	for _, a := range accounts {
-		if err = out.Write(AccountFields(Account{&a, colmap[a.Id]})); err != nil {
+		if err = out.Write(accountFields(account{&a, colmap[a.Id]})); err != nil {
 			return err
 		}
 	}
@@ -87,7 +87,7 @@ func (l *AccountsCommand) list(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
+func (l *accountsCommand) show(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -95,33 +95,33 @@ func (l *AccountsCommand) show(pc *kingpin.ParseContext) error {
 	out := new(ShowFieldOutput)
 	out.Setup(strings.Split(l.Fields, ","))
 
-	account, err := l.Client.Account(l.Id)
+	a, err := l.Client.Account(l.Id)
 	if err != nil {
 		return err
 	}
 	collabs, err := l.Client.Collaborations()
 	colmap := make(map[string]string)
 	if err == nil {
-		colmap[account.Id] = "Owner"
+		colmap[a.Id] = "Owner"
 		for _, col := range collabs {
 			colmap[col.Account.Id] = col.RoleLabel
 		}
 	}
 
-	if err = out.Write(AccountFields(Account{account, colmap[account.Id]})); err != nil {
+	if err = out.Write(accountFields(account{a, colmap[a.Id]})); err != nil {
 		return err
 	}
 	out.Flush()
 	return nil
 }
 
-func ConfigureAccountsCommand(app *CliApp) {
-	cmd := AccountsCommand{CliApp: app}
+func configureAccountsCommand(app *CLIApp) {
+	cmd := accountsCommand{CLIApp: app}
 	accounts := app.Command("accounts", "manage accounts")
 
 	list := accounts.Command("list", "list accounts").Default().Action(cmd.list)
 	list.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultAccountListFields, ",")).
+		Default(strings.Join(defaultAccountListFields, ",")).
 		StringVar(&cmd.Fields)
 
 	show := accounts.Command("show", "Show detailed account info").Action(cmd.show)
@@ -129,7 +129,7 @@ func ConfigureAccountsCommand(app *CliApp) {
 		Required().StringVar(&cmd.Id)
 
 	show.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultAccountShowFields, ",")).
+		Default(strings.Join(defaultAccountShowFields, ",")).
 		StringVar(&cmd.Fields)
 
 }

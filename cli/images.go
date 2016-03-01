@@ -9,21 +9,21 @@ import (
 )
 
 var (
-	DefaultImageListFields = []string{"id", "owner", "type", "created", "status", "arch", "name"}
-	DefaultImageShowFields = []string{"id", "type", "owner", "created_at", "status", "locked", "arch",
+	defaultImageListFields = []string{"id", "owner", "type", "created", "status", "arch", "name"}
+	defaultImageShowFields = []string{"id", "type", "owner", "created_at", "status", "locked", "arch",
 		"name", "description", "username", "virtual_size", "disk_size", "public", "compatibility_mode",
 		"official", "ancestor_id", "license_name"}
 )
 
-type ImagesCommand struct {
-	*CliApp
+type imagesCommand struct {
+	*CLIApp
 	Id      string
 	IdList  []string
 	ShowAll bool
 	Fields  string
 }
 
-func ImageFields(i *brightbox.Image) map[string]string {
+func imageFields(i *brightbox.Image) map[string]string {
 	owner := i.Owner
 	itype := i.SourceType
 	if i.Official {
@@ -104,7 +104,7 @@ func (il imagesForDisplay) sortKeys(i int) []interface{} {
 	}
 }
 
-func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
+func (l *imagesCommand) list(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 				continue
 			}
 		}
-		if err = out.Write(ImageFields(&i)); err != nil {
+		if err = out.Write(imageFields(&i)); err != nil {
 			return err
 		}
 	}
@@ -146,7 +146,7 @@ func (l *ImagesCommand) list(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
+func (l *imagesCommand) show(pc *kingpin.ParseContext) error {
 
 	err := l.Configure()
 	if err != nil {
@@ -159,7 +159,7 @@ func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
 	if err != nil {
 		l.Fatalf(err.Error())
 	}
-	if err = out.Write(ImageFields(i)); err != nil {
+	if err = out.Write(imageFields(i)); err != nil {
 		return err
 	}
 	out.Flush()
@@ -167,7 +167,7 @@ func (l *ImagesCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func (l *ImagesCommand) destroy(pc *kingpin.ParseContext) error {
+func (l *imagesCommand) destroy(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -182,22 +182,22 @@ func (l *ImagesCommand) destroy(pc *kingpin.ParseContext) error {
 		}
 	}
 	if returnError {
-		return genericError
+		return errGeneric
 	}
 	return nil
 }
 
-func ConfigureImagesCommand(app *CliApp) {
-	cmd := ImagesCommand{CliApp: app}
+func configureImagesCommand(app *CLIApp) {
+	cmd := imagesCommand{CLIApp: app}
 	images := app.Command("images", "Manage server images")
 	list := images.Command("list", "List server images").Default().Action(cmd.list)
 	list.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultImageListFields, ",")).
+		Default(strings.Join(defaultImageListFields, ",")).
 		StringVar(&cmd.Fields)
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)
 	show := images.Command("show", "View details of a server image").Action(cmd.show)
 	show.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultImageShowFields,",")).
+		Default(strings.Join(defaultImageShowFields,",")).
 		StringVar(&cmd.Fields)
 	show.Arg("identifier", "Identifier of image to show").Required().StringVar(&cmd.Id)
 	destroy := images.Command("destroy", "Destroy a server image").Action(cmd.destroy)

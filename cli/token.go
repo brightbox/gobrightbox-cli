@@ -6,14 +6,14 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-type TokenCommand struct {
-	*CliApp
+type tokenCommand struct {
+	*CLIApp
 	Id     string
 	Force  bool
 	Format string
 }
 
-func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
+func (l *tokenCommand) create(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func (l *TokenCommand) create(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *TokenCommand) clear(pc *kingpin.ParseContext) error {
+func (l *tokenCommand) clear(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -56,8 +56,8 @@ func (l *TokenCommand) clear(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func ConfigureTokenCommand(app *CliApp) {
-	cmd := TokenCommand{CliApp: app}
+func configureTokenCommand(app *CLIApp) {
+	cmd := tokenCommand{CLIApp: app}
 	token := app.Command("token", "manage oauth tokens")
 	create := token.Command("create", "return a valid token for the client, create one if necessary").Action(cmd.create)
 	create.Flag("clear", "clear the local cache first and create a new token").BoolVar(&cmd.Force)

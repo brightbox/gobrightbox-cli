@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	DefaultCloudIPListFields = []string{"id", "status", "public_ip", "pts", "destination", "name"}
-	DefaultCloudIPShowFields = []string{"id", "name", "status", "public_ip", "fqdn", "reverse_dns", "destination", "port_translators"}
+	defaultCloudIPListFields = []string{"id", "status", "public_ip", "pts", "destination", "name"}
+	defaultCloudIPShowFields = []string{"id", "name", "status", "public_ip", "fqdn", "reverse_dns", "destination", "port_translators"}
 )
 
-type CloudIPsCommand struct {
-	*CliApp
+type cloudIPsCommand struct {
+	*CLIApp
 	All          bool
 	Id           string
 	DestId       string
@@ -60,7 +60,7 @@ func formatPortTranslators(pts []brightbox.PortTranslator) string {
 	return strings.Join(fpts, ",")
 }
 
-func CloudIPFields(cip *brightbox.CloudIP) map[string]string {
+func cloudIPFields(cip *brightbox.CloudIP) map[string]string {
 	return map[string]string{
 		"id":               cip.Id,
 		"status":           cip.Status,
@@ -74,7 +74,7 @@ func CloudIPFields(cip *brightbox.CloudIP) map[string]string {
 	}
 }
 
-func (l *CloudIPsCommand) list(pc *kingpin.ParseContext) error {
+func (l *cloudIPsCommand) list(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (l *CloudIPsCommand) list(pc *kingpin.ParseContext) error {
 		return err
 	}
 	for _, cip := range cips {
-		if err = out.Write(CloudIPFields(&cip)); err != nil {
+		if err = out.Write(cloudIPFields(&cip)); err != nil {
 			return err
 		}
 	}
@@ -97,7 +97,7 @@ func (l *CloudIPsCommand) list(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *CloudIPsCommand) show(pc *kingpin.ParseContext) error {
+func (l *cloudIPsCommand) show(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (l *CloudIPsCommand) show(pc *kingpin.ParseContext) error {
 	if err != nil {
 		l.Fatalf(err.Error())
 	}
-	if err = out.Write(CloudIPFields(cip)); err != nil {
+	if err = out.Write(cloudIPFields(cip)); err != nil {
 		return err
 	}
 	out.Flush()
@@ -117,7 +117,7 @@ func (l *CloudIPsCommand) show(pc *kingpin.ParseContext) error {
 
 }
 
-func (l *CloudIPsCommand) destroy(pc *kingpin.ParseContext) error {
+func (l *cloudIPsCommand) destroy(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -132,7 +132,7 @@ func (l *CloudIPsCommand) destroy(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *CloudIPsCommand) mapcip(pc *kingpin.ParseContext) error {
+func (l *cloudIPsCommand) mapcip(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -170,7 +170,7 @@ func (l *CloudIPsCommand) mapcip(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func (l *CloudIPsCommand) unmapcip(pc *kingpin.ParseContext) error {
+func (l *cloudIPsCommand) unmapcip(pc *kingpin.ParseContext) error {
 	err := l.Configure()
 	if err != nil {
 		return err
@@ -183,18 +183,18 @@ func (l *CloudIPsCommand) unmapcip(pc *kingpin.ParseContext) error {
 	return nil
 }
 
-func ConfigureCloudIPsCommand(app *CliApp) {
-	cmd := CloudIPsCommand{CliApp: app}
+func configureCloudIPsCommand(app *CLIApp) {
+	cmd := cloudIPsCommand{CLIApp: app}
 	cloudips := app.Command("cloudips", "Manage Cloud IPs")
 
 	list := cloudips.Command("list", "List Cloud IPs").Action(cmd.list).Default()
 	list.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultCloudIPListFields, ",")).
+		Default(strings.Join(defaultCloudIPListFields, ",")).
 		StringVar(&cmd.Fields)
 
 	show := cloudips.Command("show", "View details on a Cloud IP").Action(cmd.show)
 	show.Flag("fields", "Which fields to display").
-		Default(strings.Join(DefaultCloudIPShowFields, ",")).
+		Default(strings.Join(defaultCloudIPShowFields, ",")).
 		StringVar(&cmd.Fields)
 	show.Arg("identifier", "Identifier of Cloud IP to show").Required().StringVar(&cmd.Id)
 
