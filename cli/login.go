@@ -102,7 +102,10 @@ func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 	switch oc := oc.(type) {
 	case oauth2.Config:
 		fmt.Printf("Password for %s: ", client.ClientName)
-		password := gopass.GetPasswd()
+		password, err := gopass.GetPasswd()
+		if err != nil {
+			l.Fatalf("Password not provided: %s", err)
+		}
 		if string(password) == "" {
 			l.Fatalf("Password not provided.")
 		}
