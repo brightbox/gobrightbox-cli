@@ -30,7 +30,7 @@ func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 	clientname := ""
 
 	if l.ClientName != "" {
-		clientname = client.ClientName
+		clientname = l.ClientName
 		client, err = l.Config.Client(clientname)
 		if err != nil {
 			l.Fatalf("Couldn't find client config %s: %s", clientname, err)
