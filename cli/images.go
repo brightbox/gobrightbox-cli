@@ -12,7 +12,7 @@ var (
 	defaultImageListFields = []string{"id", "owner", "type", "created", "status", "arch", "name"}
 	defaultImageShowFields = []string{"id", "type", "owner", "created_at", "status", "locked", "arch",
 		"name", "description", "username", "virtual_size", "disk_size", "public", "compatibility_mode",
-		"official", "ancestor_id", "license_name"}
+		"official", "ancestor_id", "licence_name"}
 )
 
 type imagesCommand struct {
@@ -62,7 +62,7 @@ func imageFields(i *brightbox.Image) map[string]string {
 		"compatibility_mode": formatBool(i.CompatibilityMode),
 		"official":           formatBool(i.Official),
 		"ancestor_id":        i.AncestorId,
-		"license_name":       i.LicenseName,
+		"licence_name":       i.LicenceName,
 	}
 }
 
