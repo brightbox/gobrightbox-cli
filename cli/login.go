@@ -50,7 +50,7 @@ func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 			if client == nil {
 				client = &Client{
 					ClientName: clientname,
-					Username: username,
+					Username:   username,
 				}
 			}
 		}
@@ -58,15 +58,15 @@ func (l *loginCommand) login(pc *kingpin.ParseContext) error {
 
 	if client == nil {
 		client = l.Config.DefaultClient()
-		if client != nil	{
+		if client != nil {
 			username = client.Username
 			clientname = client.ClientName
 		}
 	}
-	
+
 	if client == nil {
 		client = &Client{
-			Username: username,
+			Username:   username,
 			ClientName: clientname,
 		}
 	}

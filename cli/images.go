@@ -197,7 +197,7 @@ func configureImagesCommand(app *CLIApp) {
 	list.Flag("show-all", "Show all public images from all accounts").Default("false").BoolVar(&cmd.ShowAll)
 	show := images.Command("show", "View details of a server image").Action(cmd.show)
 	show.Flag("fields", "Which fields to display").
-		Default(strings.Join(defaultImageShowFields,",")).
+		Default(strings.Join(defaultImageShowFields, ",")).
 		StringVar(&cmd.Fields)
 	show.Arg("identifier", "Identifier of image to show").Required().StringVar(&cmd.Id)
 	destroy := images.Command("destroy", "Destroy a server image").Action(cmd.destroy)
