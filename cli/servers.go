@@ -159,7 +159,7 @@ func (l *serversCommand) create(pc *kingpin.ParseContext) error {
 	if l.Groups != nil {
 		groups := strings.Split(*l.Groups, ",")
 		if len(groups) > 1 || (len(groups) == 1 && groups[0] != "") {
-			newServer.ServerGroups = &groups
+			newServer.ServerGroups = groups
 		}
 	}
 
@@ -221,7 +221,7 @@ func (l *serversCommand) update(pc *kingpin.ParseContext) error {
 	if l.Groups != nil {
 		groups := strings.Split(*l.Groups, ",")
 		if len(groups) > 1 || (len(groups) == 1 && groups[0] != "") {
-			updateServer.ServerGroups = &groups
+			updateServer.ServerGroups = groups
 		}
 	}
 
