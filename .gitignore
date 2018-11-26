@@ -1,2 +1,5 @@
 bin/
+pkg/
+dist/
+vendor/
 gobrightbox

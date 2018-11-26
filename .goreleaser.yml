@@ -1,0 +1,37 @@
+project_name: gobrightbox-cli
+release:
+  github:
+    owner: brightbox
+    name: gobrightbox-cli
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+builds:
+- env:
+  - CGO_ENABLED=0
+  binary: gobrightbox
+archive:
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-{{.Commit}}"
+nfpm:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  vendor: Brightbox
+  homepage: https://github.com/brightbox/gobrightbox-cli
+  maintainer: support@brightbox.com
+  description: The Brightbox Cloud CLI written in the Go programming language
+  formats:
+    - deb
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
